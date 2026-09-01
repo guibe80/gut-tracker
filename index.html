@@ -1,125 +1,61 @@
-<!doctype html>
-<html lang="en-GB">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1f6f5c">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Gut Tracker">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-192.png">
-<title>Gut Tracker</title>
+<!doctype html><html lang="en-GB"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6f5c"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Gut Tracker">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><title>Gut Tracker</title>
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;color:#17221e;background:#f5f7f6;--green:#1f6f5c;--card:#fff;--border:#d9e1dd;--muted:#61716b}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-main{max-width:760px;margin:auto;padding:18px 16px 40px}
-h1{font-size:28px;margin:4px 0}.sub{color:var(--muted);margin:0 0 18px}
-nav{display:flex;gap:8px;overflow:auto;margin-bottom:14px}nav button{white-space:nowrap}
-button{min-height:44px;border:1px solid var(--border);border-radius:12px;padding:10px 14px;background:#fff;font-weight:650;color:#17221e}
-button.primary{background:var(--green);border-color:var(--green);color:white}
-button.danger{color:#9b2c2c}.tab.active{background:#e6f1ed;border-color:#a8c7bc}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}
-label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}
-input,select,textarea{width:100%;min-height:44px;border:1px solid var(--border);border-radius:11px;padding:10px 12px;font:inherit;background:white;color:inherit}
-textarea{min-height:78px;resize:vertical}
-.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px}.check{display:flex;align-items:center;gap:8px;min-height:42px;font-weight:500}.check input{width:20px;min-height:20px}
-.row{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}.muted{color:var(--muted);font-size:13px}
-.metric{font-size:26px;font-weight:750}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metricbox{border:1px solid var(--border);border-radius:12px;padding:12px}
-.entry{border-top:1px solid var(--border);padding:12px 0}.entry:first-child{border-top:0}
-.pill{display:inline-block;background:#eef3f0;border-radius:999px;padding:4px 8px;font-size:12px;margin:2px}
-.bar{height:10px;background:#e7ece9;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--green)}
-.notice{background:#f0f6f3;border-left:4px solid var(--green);padding:12px;border-radius:8px}
-@media(max-width:500px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.checks{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<main>
-<header><h1>Gut Tracker</h1><p class="sub">A private, on-device diary for your 4-week food & symptom experiment.</p></header>
-<nav>
-<button class="tab active" data-tab="log">Log</button><button class="tab" data-tab="insights">Insights</button><button class="tab" data-tab="data">Data</button>
-</nav>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17221e;background:#f5f7f6;--g:#1f6f5c;--b:#d9e1dd;--m:#61716b}*{box-sizing:border-box}body{margin:0}main{max-width:780px;margin:auto;padding:18px 16px 44px}h1{font-size:28px;margin:4px 0}.sub,.muted{color:var(--m)}.muted{font-size:13px}nav{display:flex;gap:8px;overflow:auto;margin-bottom:14px}button{min-height:44px;border:1px solid var(--b);border-radius:12px;padding:9px 14px;background:#fff;font-weight:650;color:#17221e}button.primary{background:var(--g);border-color:var(--g);color:#fff}button.danger{color:#9b2c2c}.tab.active{background:#e6f1ed;border-color:#a8c7bc}.card{background:#fff;border:1px solid var(--b);border-radius:16px;padding:16px;margin-bottom:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}input,select,textarea{width:100%;min-height:44px;border:1px solid var(--b);border-radius:11px;padding:10px 12px;font:inherit;background:#fff}textarea{min-height:78px}.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px}.check{display:flex;align-items:center;gap:8px;min-height:42px;font-weight:500}.check input{width:20px}.row{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}.entry{border-top:1px solid var(--b);padding:13px 0}.entry:first-child{border-top:0}.pill{display:inline-block;background:#eef3f0;border-radius:999px;padding:4px 8px;font-size:12px;margin:2px}.actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.small{min-height:38px;padding:7px 10px;font-size:13px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metricbox{border:1px solid var(--b);border-radius:12px;padding:12px}.metric{font-size:25px;font-weight:750}.bar{height:10px;background:#e7ece9;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--g)}.notice{background:#f0f6f3;border-left:4px solid var(--g);padding:12px;border-radius:8px}@media(max-width:520px){.grid,.checks{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}}
+</style></head><body><main>
+<header><h1>Gut Tracker</h1><p class="sub">Private, on-device food & symptom diary.</p></header>
+<nav><button class="tab active" data-tab="food">🍽️ Food</button><button class="tab" data-tab="symptoms">🩺 Symptoms</button><button class="tab" data-tab="timeline">🕒 Timeline</button><button class="tab" data-tab="insights">📊 Insights</button><button class="tab" data-tab="data">💾 Data</button></nav>
 
-<section id="log" class="tabpane">
-<form id="form" class="card">
-<div class="grid">
-<div><label>Date</label><input id="date" type="date" required></div>
-<div><label>Time</label><input id="time" type="time" required></div>
-<div class="full"><label>Meal / food</label><textarea id="meal" placeholder="e.g. 2 seeded sourdough, eggs, yoghurt"></textarea></div>
-</div>
+<section id="food" class="pane"><form id="foodForm" class="card"><h2>Record food</h2><p class="muted">Record food first. Add symptoms separately when they occur.</p>
+<div class="grid"><div><label>Date</label><input id="fd" type="date" required></div><div><label>Time</label><input id="ft" type="time" required></div>
+<div><label>Meal</label><select id="fm"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option><option>Drink</option><option>Other</option></select></div>
+<div><label>Portion</label><select id="fp"><option>Small</option><option selected>Normal</option><option>Large</option></select></div>
+<div class="full"><label>What did you eat?</label><textarea id="foods" placeholder="e.g. chicken, white rice, courgette"></textarea></div></div>
 <div style="margin-top:14px"><label>Potential triggers</label><div class="checks">
-<label class="check"><input type="checkbox" value="Lactose/dairy"> Lactose/dairy</label>
-<label class="check"><input type="checkbox" value="Wheat"> Wheat</label>
-<label class="check"><input type="checkbox" value="Onion/garlic"> Onion/garlic</label>
-<label class="check"><input type="checkbox" value="Beans/lentils"> Beans/lentils</label>
-<label class="check"><input type="checkbox" value="Caffeine"> Caffeine</label>
-<label class="check"><input type="checkbox" value="Sweeteners"> Sweeteners</label>
-<label class="check"><input type="checkbox" value="Large portion"> Large portion</label>
-<label class="check"><input type="checkbox" value="High fat"> High fat</label>
-</div></div>
-<div class="grid" style="margin-top:14px">
-<div><label>Bloating (0–10)</label><input id="bloat" type="number" min="0" max="10" value="0"></div>
-<div><label>Abdominal pain (0–10)</label><input id="pain" type="number" min="0" max="10" value="0"></div>
-<div><label>Gas (0–10)</label><input id="gas" type="number" min="0" max="10" value="0"></div>
-<div><label>Urgency (0–10)</label><input id="urgency" type="number" min="0" max="10" value="0"></div>
-<div><label>Symptoms appeared</label><select id="delay"><option>Not applicable</option><option>0–2 hours</option><option>2–6 hours</option><option>6–24 hours</option><option>Next day</option></select></div>
-<div><label>Stool (Bristol)</label><select id="stool"><option value="">None</option><option>1 – Hard pellets</option><option>2 – Lumpy/firm</option><option>3 – Cracked sausage</option><option>4 – Smooth sausage</option><option>5 – Soft pieces</option><option>6 – Mushy</option><option>7 – Watery</option></select></div>
-<div class="full"><label>Notes</label><textarea id="notes" placeholder="Stress, exercise, medication timing, unusual meal, sleep, etc."></textarea></div>
-</div>
-<div class="row" style="margin-top:14px"><button class="primary" type="submit">Save entry</button><button type="button" id="reset">Clear</button></div>
-<p id="status" class="muted" aria-live="polite"></p>
-</form>
+<label class="check"><input type="checkbox" value="Lactose/dairy">Lactose/dairy</label><label class="check"><input type="checkbox" value="Wheat">Wheat</label>
+<label class="check"><input type="checkbox" value="Onion/garlic">Onion/garlic</label><label class="check"><input type="checkbox" value="Beans/lentils">Beans/lentils</label>
+<label class="check"><input type="checkbox" value="Caffeine">Caffeine</label><label class="check"><input type="checkbox" value="Sweeteners">Sweeteners</label>
+<label class="check"><input type="checkbox" value="High fat">High fat</label><label class="check"><input type="checkbox" value="Large portion">Large portion</label>
+</div></div><div style="margin-top:14px"><label>Notes</label><textarea id="fn" placeholder="Anything unusual?"></textarea></div>
+<div class="row" style="margin-top:14px"><button class="primary">Save food</button><button type="button" id="fclear">Clear</button></div><p id="fs" class="muted"></p></form>
+<div class="card"><h2>Previous food</h2><input id="search" placeholder="Search food"><div id="flist"></div></div></section>
 
-<div class="card">
-<h2 style="margin-top:0">Recent entries</h2><div id="recent"></div>
-</div>
-</section>
+<section id="symptoms" class="pane hidden"><form id="symForm" class="card"><h2>Record symptoms</h2><p class="muted">Log symptoms at the time they happen.</p>
+<div class="grid"><div><label>Date</label><input id="sd" type="date" required></div><div><label>Time</label><input id="st" type="time" required></div>
+<div><label>Bloating (0–10)</label><input id="sb" type="number" min="0" max="10" value="0"></div><div><label>Abdominal pain (0–10)</label><input id="sp" type="number" min="0" max="10" value="0"></div>
+<div><label>Gas (0–10)</label><input id="sg" type="number" min="0" max="10" value="0"></div><div><label>Urgency (0–10)</label><input id="su" type="number" min="0" max="10" value="0"></div>
+<div><label>Bristol stool</label><select id="ss"><option value="">None</option><option>1 – Hard pellets</option><option>2 – Lumpy/firm</option><option>3 – Cracked sausage</option><option>4 – Smooth sausage</option><option>5 – Soft pieces</option><option>6 – Mushy</option><option>7 – Watery</option></select></div>
+<div><label>Other symptom</label><input id="so" placeholder="e.g. nausea"></div><div class="full"><label>Notes</label><textarea id="sn" placeholder="What was happening when it started?"></textarea></div></div>
+<div class="row" style="margin-top:14px"><button class="primary">Save symptoms</button><button type="button" id="sclear">Clear</button></div><p id="sts" class="muted"></p></form>
+<div class="card"><h2>Previous symptoms</h2><div id="slist"></div></div></section>
 
-<section id="insights" class="tabpane hidden">
-<div class="card"><h2 style="margin-top:0">Overview</h2><div class="metrics">
-<div class="metricbox"><div class="muted">Entries</div><div id="n" class="metric">0</div></div>
-<div class="metricbox"><div class="muted">Avg bloating</div><div id="avgB" class="metric">0.0</div></div>
-<div class="metricbox"><div class="muted">Avg pain</div><div id="avgP" class="metric">0.0</div></div>
-</div></div>
-<div class="card"><h2 style="margin-top:0">Trigger patterns</h2><p class="muted">Only associations in your logged meals are shown. This does not establish intolerance.</p><div id="triggers"></div></div>
-<div class="card"><h2 style="margin-top:0">Experiment guidance</h2><div class="notice">Use the first 1–2 weeks to observe your normal diet. Then test one suspected food at a time rather than removing many foods simultaneously.</div></div>
-</section>
-
-<section id="data" class="tabpane hidden">
-<div class="card"><h2 style="margin-top:0">Your data stays on this device</h2><p class="muted">This app stores entries in the browser on your iPhone. It does not send them to a server.</p>
-<div class="row"><button class="primary" id="export">Export CSV</button><button id="backup">Backup JSON</button><label style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--border);border-radius:12px;padding:10px 14px;background:#fff;cursor:pointer">Import JSON<input id="import" type="file" accept="application/json" hidden></label><button class="danger" id="wipe">Delete all data</button></div>
-<p class="muted" style="margin-top:12px">Keep a backup before deleting or changing browser data.</p></div>
-</section>
-</main>
-<script>
-const DB='gut-tracker-v1', STORE='entries'; let entries=[];
-const $=id=>document.getElementById(id);
-function today(){const d=new Date();return d.toISOString().slice(0,10)}
-function nowTime(){return new Date().toTimeString().slice(0,5)}
-function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function getAll(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function add(e){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).add(e);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function clearDB(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
-function clamp(v){v=Number(v);return Number.isFinite(v)?Math.max(0,Math.min(10,v)):0}
-function csvEsc(v){return '"'+String(v??'').replaceAll('"','""')+'"'}
-function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-function render(){entries.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));$('n').textContent=entries.length;const avg=(k)=>entries.length?(entries.reduce((s,e)=>s+e[k],0)/entries.length).toFixed(1):'0.0';$('avgB').textContent=avg('bloat');$('avgP').textContent=avg('pain');
-$('recent').innerHTML=entries.slice(0,8).map(e=>`<div class="entry"><strong>${e.date} ${e.time}</strong> — ${escapeHtml(e.meal)}<div>${e.triggers.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')} ${e.stool?`<span class="pill">Stool ${escapeHtml(e.stool.split(' ')[0])}</span>`:''}</div><div class="muted">Bloat ${e.bloat}/10 · Pain ${e.pain}/10 · Gas ${e.gas}/10 · Urgency ${e.urgency}/10 · ${escapeHtml(e.delay)}</div></div>`).join('')||'<p class="muted">No entries yet.</p>';
-const map={};entries.forEach(e=>e.triggers.forEach(t=>{map[t]??={n:0,s:0};map[t].n++;map[t].s+=(e.bloat+e.pain+e.gas+e.urgency)/4}));const ranked=Object.entries(map).sort((a,b)=>b[1].s/a[1].n-a[1].s/b[1].n);
-$('triggers').innerHTML=ranked.map(([t,v])=>{const score=v.s/v.n;return `<div style="margin:12px 0"><div style="display:flex;justify-content:space-between"><strong>${escapeHtml(t)}</strong><span class="muted">${v.n} meals · avg ${score.toFixed(1)}/10</span></div><div class="bar"><i style="width:${score*10}%"></i></div></div>`}).join('')||'<p class="muted">Log meals with triggers to see patterns.</p>';
-}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function init(){entries=await getAll();$('date').value=today();$('time').value=nowTime();render()}
-$('form').addEventListener('submit',async ev=>{ev.preventDefault();const meal=$('meal').value.trim();if(!meal){$('status').textContent='Enter the meal/food first.';return}const e={date:$('date').value,time:$('time').value,meal,triggers:[...document.querySelectorAll('.check input:checked')].map(x=>x.value),bloat:clamp($('bloat').value),pain:clamp($('pain').value),gas:clamp($('gas').value),urgency:clamp($('urgency').value),delay:$('delay').value,stool:$('stool').value,notes:$('notes').value.trim()};await add(e);entries=await getAll();$('status').textContent='Saved on this iPhone.';$('meal').value='';$('notes').value='';document.querySelectorAll('.check input').forEach(x=>x.checked=false);render()});
-$('reset').onclick=()=>{$('form').reset();$('date').value=today();$('time').value=nowTime();$('status').textContent='Form cleared.'};
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));$(b.dataset.tab).classList.remove('hidden');render()});
-$('export').onclick=()=>{const head=['Date','Time','Meal','Triggers','Bloating','Pain','Gas','Urgency','Delay','Bristol','Notes'];const rows=entries.map(e=>[e.date,e.time,e.meal,e.triggers.join('; '),e.bloat,e.pain,e.gas,e.urgency,e.delay,e.stool,e.notes]);download('gut-tracker.csv',[head,...rows].map(r=>r.map(csvEsc).join(',')).join('\n'),'text/csv')};
-$('backup').onclick=()=>download('gut-tracker-backup.json',JSON.stringify(entries,null,2),'application/json');
-$('import').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data))throw Error();await clearDB();for(const e of data)await add(e);entries=await getAll();render();alert('Backup imported.')}catch{alert('Could not import that file.')}ev.target.value=''};
-$('wipe').onclick=async()=>{if(confirm('Delete every gut-tracking entry from this device?')){await clearDB();entries=[];render()}};
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-init();
-</script>
-</body>
-</html>
+<section id="timeline" class="pane hidden"><div class="card"><h2>Timeline</h2><p class="muted">Food and symptoms together by date/time. The app does not assume causation.</p><div id="timelineList"></div></div></section>
+<section id="insights" class="pane hidden"><div class="card"><h2>Overview</h2><div class="metrics"><div class="metricbox"><div class="muted">Food entries</div><div id="fc" class="metric">0</div></div><div class="metricbox"><div class="muted">Symptom entries</div><div id="xc" class="metric">0</div></div><div class="metricbox"><div class="muted">Avg symptom score</div><div id="xa" class="metric">0.0</div></div></div></div>
+<div class="card"><h2>Possible associations</h2><p class="muted">Symptoms recorded within 24 hours after meals containing a trigger. This is pattern-finding, not diagnosis.</p><div id="analysis"></div></div>
+<div class="card"><div class="notice"><strong>Method:</strong> Weeks 1–2 observe your normal diet. Then, if a pattern is strong, test one suspected food at a time.</div></div></section>
+<section id="data" class="pane hidden"><div class="card"><h2>Your data</h2><p class="muted">Stored locally on this device. Nothing is uploaded to GitHub or a server.</p><div class="row"><button class="primary" id="csv">Export CSV</button><button id="json">Backup JSON</button><label style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--b);border-radius:12px;padding:9px 14px;background:#fff">Import JSON<input id="imp" type="file" accept="application/json" hidden></label><button class="danger" id="wipe">Delete all data</button></div><p class="muted">Make a JSON backup before major app updates.</p></div></section>
+</main><script>
+const DB='gut-tracker-v2',V=1;let db,foods=[],symptoms=[],editF=null,editS=null,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),today=()=>new Date().toISOString().slice(0,10),tm=()=>new Date().toTimeString().slice(0,5),cl=v=>Math.max(0,Math.min(10,Number(v)||0));
+function openDB(){return new Promise((res,rej)=>{let r=indexedDB.open(DB,V);r.onupgradeneeded=()=>{let d=r.result;if(!d.objectStoreNames.contains('foods'))d.createObjectStore('foods',{keyPath:'id',autoIncrement:true});if(!d.objectStoreNames.contains('symptoms'))d.createObjectStore('symptoms',{keyPath:'id',autoIncrement:true})};r.onsuccess=()=>{db=r.result;res()};r.onerror=()=>rej(r.error)})}
+const all=s=>new Promise((res,rej)=>{let r=db.transaction(s).objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}),put=(s,o)=>new Promise((res,rej)=>{let r=db.transaction(s,'readwrite').objectStore(s).put(o);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}),del=(s,i)=>new Promise((res,rej)=>{let r=db.transaction(s,'readwrite').objectStore(s).delete(i);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)}),clr=s=>new Promise((res,rej)=>{let r=db.transaction(s,'readwrite').objectStore(s).clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error)});
+function resetF(){editF=null;$('foodForm').reset();$('fd').value=today();$('ft').value=tm();$('fs').textContent=''}function resetS(){editS=null;$('symForm').reset();$('sd').value=today();$('st').value=tm();$('sts').textContent=''}
+function render(){foods.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));symptoms.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));let q=$('search').value.toLowerCase();
+$('flist').innerHTML=foods.filter(x=>(x.foods+' '+x.meal).toLowerCase().includes(q)).map(x=>`<div class="entry"><strong>${esc(x.date)} ${esc(x.time)}</strong> · ${esc(x.meal)} · ${esc(x.portion)}<br>${esc(x.foods)}<div>${x.triggers.map(t=>`<span class="pill">${esc(t)}</span>`).join('')}</div><div class="muted">${esc(x.notes)}</div><div class="actions"><button class="small" data-ef="${x.id}">Edit</button><button class="small danger" data-df="${x.id}">Delete</button></div></div>`).join('')||'<p class="muted">No food entries.</p>';
+$('slist').innerHTML=symptoms.map(x=>`<div class="entry"><strong>${esc(x.date)} ${esc(x.time)}</strong><div class="muted">Bloating ${x.bloat}/10 · Pain ${x.pain}/10 · Gas ${x.gas}/10 · Urgency ${x.urgency}/10${x.stool?' · Bristol '+esc(x.stool.split(' ')[0]):''}</div>${x.other?'<div>Other: '+esc(x.other)+'</div>':''}<div class="muted">${esc(x.notes)}</div><div class="actions"><button class="small" data-es="${x.id}">Edit</button><button class="small danger" data-ds="${x.id}">Delete</button></div></div>`).join('')||'<p class="muted">No symptom entries.</p>';
+let t=[...foods.map(x=>({...x,k:'f'})),...symptoms.map(x=>({...x,k:'s'}))].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));$('timelineList').innerHTML=t.map(x=>x.k==='f'?`<div class="entry"><strong>${esc(x.date)} ${esc(x.time)}</strong> · 🍽️ <strong>${esc(x.meal)}</strong><br>${esc(x.foods)}</div>`:`<div class="entry"><strong>${esc(x.date)} ${esc(x.time)}</strong> · 🩺 <strong>Symptoms</strong><br><span class="muted">Bloat ${x.bloat}/10 · Pain ${x.pain}/10 · Gas ${x.gas}/10 · Urgency ${x.urgency}/10</span></div>`).join('')||'<p class="muted">Nothing logged yet.</p>';
+$('fc').textContent=foods.length;$('xc').textContent=symptoms.length;let avg=symptoms.length?symptoms.reduce((a,x)=>a+(x.bloat+x.pain+x.gas+x.urgency)/4,0)/symptoms.length:0;$('xa').textContent=avg.toFixed(1);
+let m={};foods.forEach(f=>f.triggers.forEach(tr=>{m[tr]??=[];let a=new Date(f.date+'T'+f.time),b=new Date(a.getTime()+86400000);symptoms.forEach(s=>{let d=new Date(s.date+'T'+s.time);if(d>a&&d<=b)m[tr].push((s.bloat+s.pain+s.gas+s.urgency)/4)})}));let r=Object.entries(m).filter(([,v])=>v.length);$('analysis').innerHTML=r.map(([k,v])=>{let a=v.reduce((x,y)=>x+y,0)/v.length;return `<div style="margin:14px 0"><div style="display:flex;justify-content:space-between"><strong>${esc(k)}</strong><span class="muted">${v.length} linked symptom record${v.length===1?'':'s'} · ${a.toFixed(1)}/10</span></div><div class="bar"><i style="width:${a*10}%"></i></div></div>`}).join('')||'<p class="muted">Log food and symptoms to see patterns.</p>'}
+$('search').oninput=render;
+$('foodForm').onsubmit=async e=>{e.preventDefault();let o={date:$('fd').value,time:$('ft').value,meal:$('fm').value,portion:$('fp').value,foods:$('foods').value.trim(),triggers:[...document.querySelectorAll('#foodForm .check input:checked')].map(x=>x.value),notes:$('fn').value.trim()};if(!o.foods){$('fs').textContent='Enter the food first.';return}if(editF)o.id=editF;await put('foods',o);foods=await all('foods');resetF();render()};
+$('symForm').onsubmit=async e=>{e.preventDefault();let o={date:$('sd').value,time:$('st').value,bloat:cl($('sb').value),pain:cl($('sp').value),gas:cl($('sg').value),urgency:cl($('su').value),stool:$('ss').value,other:$('so').value.trim(),notes:$('sn').value.trim()};if(editS)o.id=editS;await put('symptoms',o);symptoms=await all('symptoms');resetS();render()};
+document.addEventListener('click',async e=>{let b=e.target.closest('button');if(!b)return;if(b.dataset.ef){let x=foods.find(v=>v.id==b.dataset.ef);editF=x.id;$('fd').value=x.date;$('ft').value=x.time;$('fm').value=x.meal;$('fp').value=x.portion;$('foods').value=x.foods;$('fn').value=x.notes;document.querySelectorAll('#foodForm .check input').forEach(c=>c.checked=x.triggers.includes(c.value));$('fs').textContent='Editing food entry.';window.scrollTo(0,0)}if(b.dataset.df&&confirm('Delete this food entry?')){await del('foods',+b.dataset.df);foods=await all('foods');render()}if(b.dataset.es){let x=symptoms.find(v=>v.id==b.dataset.es);editS=x.id;$('sd').value=x.date;$('st').value=x.time;$('sb').value=x.bloat;$('sp').value=x.pain;$('sg').value=x.gas;$('su').value=x.urgency;$('ss').value=x.stool;$('so').value=x.other;$('sn').value=x.notes;$('sts').textContent='Editing symptom entry.';window.scrollTo(0,0)}if(b.dataset.ds&&confirm('Delete this symptom entry?')){await del('symptoms',+b.dataset.ds);symptoms=await all('symptoms');render()}});
+$('fclear').onclick=resetF;$('sclear').onclick=resetS;document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.pane').forEach(x=>x.classList.add('hidden'));$(b.dataset.tab).classList.remove('hidden');render()});
+function download(n,t,type){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$('csv').onclick=()=>{let r=[['Type','Date','Time','Meal','Portion','Food','Triggers','Bloating','Pain','Gas','Urgency','Bristol','Other','Notes']];foods.forEach(x=>r.push(['Food',x.date,x.time,x.meal,x.portion,x.foods,x.triggers.join('; '),'','','','','','',x.notes]));symptoms.forEach(x=>r.push(['Symptom',x.date,x.time,'','','','',x.bloat,x.pain,x.gas,x.urgency,x.stool,x.other,x.notes]));download('gut-tracker.csv',r.map(a=>a.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n'),'text/csv')};
+$('json').onclick=()=>download('gut-tracker-backup.json',JSON.stringify({version:2,foods,symptoms},null,2),'application/json');
+$('imp').onchange=async e=>{try{let x=JSON.parse(await e.target.files[0].text());if(!Array.isArray(x.foods)||!Array.isArray(x.symptoms))throw 0;await clr('foods');await clr('symptoms');for(let v of x.foods)await put('foods',v);for(let v of x.symptoms)await put('symptoms',v);foods=await all('foods');symptoms=await all('symptoms');render();alert('Backup imported.')}catch{alert('Could not import that backup.')}e.target.value=''};
+$('wipe').onclick=async()=>{if(confirm('Delete ALL food and symptom data?')){await clr('foods');await clr('symptoms');foods=[];symptoms=[];render()}};
+openDB().then(async()=>{foods=await all('foods');symptoms=await all('symptoms');resetF();resetS();render()});if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
