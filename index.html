@@ -499,7 +499,16 @@
 
             <section id="timeline" class="pane hidden">
                 <div class="card">
-                    <h2>🕒 Timeline</h2>
+                    <div class="section-title">
+                        <h2>🕒 Timeline</h2>
+                        <label>Filter <select id="timelineFilter">
+                                <option value="all">All</option>
+                                <option value="food">Food</option>
+                                <option value="glucose">Glucose</option>
+                                <option value="gut">Gut</option>
+                                <option value="bowel">Bowel</option>
+                            </select></label>
+                    </div>
                     <p class="muted">Cloud records in chronological order. Relationships are associations, not proof of
                         causation.</p>
                     <div id="timelineList"></div>
@@ -579,7 +588,7 @@
             $('slist').innerHTML = symptoms.slice(0, 10).map(x => `<div class="entry"><strong>${esc(fmt(x.occurred_at))}</strong> · ${esc(x.symptom_type || '')} · ${esc(x.severity ?? 0)}/10</div>`).join('') || '<p class="muted">No symptoms yet.</p>';
             $('blist').innerHTML = bowels.slice(0, 10).map(x => `<div class="entry"><strong>${esc(fmt(x.occurred_at))}</strong> · Bristol ${esc(x.bristol_type)}</div>`).join('') || '<p class="muted">No bowel movements yet.</p>';
             const vals = glucose.map(x => Number(x.glucose_mmol_l)).filter(Number.isFinite); $('gsummary').textContent = vals.length ? `Average recorded glucose: ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)} mmol/L · Latest: ${vals[0].toFixed(1)} mmol/L` : 'Add spot readings to see your recent pattern.';
-            const events = [...meals.map(x => ({ t: x.meal_time, label: '🍽️ ' + (x.meal_type || 'Meal').replace(/^./, character => character.toUpperCase()), detail: mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })), ...glucose.map(x => ({ t: x.reading_time, label: '🩸 ' + x.glucose_mmol_l + ' mmol/L', detail: x.timing || '' })), ...symptoms.map(x => ({ t: x.occurred_at, label: '🫃 ' + (x.symptom_type || 'Symptom'), detail: (x.severity ?? 0) + '/10' })), ...bowels.map(x => ({ t: x.occurred_at, label: '🚽 Bristol ' + x.bristol_type, detail: '' }))].sort((a, b) => new Date(b.t) - new Date(a.t)); $('timelineList').innerHTML = events.slice(0, 40).map(e => `<div class="entry"><strong>${esc(fmt(e.t))}</strong> · ${esc(e.label)}${e.detail ? ' · ' + esc(e.detail) : ''}</div>`).join('') || '<p class="muted">No records yet.</p>';
+            const timelineFilter = $('timelineFilter')?.value || 'all'; const events = [...meals.map(x => ({ type: 'food', t: x.meal_time, label: '🍽️ ' + (x.meal_type || 'Meal').replace(/^./, character => character.toUpperCase()), detail: mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })), ...glucose.map(x => ({ type: 'glucose', t: x.reading_time, label: '🩸 ' + x.glucose_mmol_l + ' mmol/L', detail: x.timing || '' })), ...symptoms.map(x => ({ type: 'gut', t: x.occurred_at, label: '🫃 ' + (x.symptom_type || 'Symptom'), detail: (x.severity ?? 0) + '/10' })), ...bowels.map(x => ({ type: 'bowel', t: x.occurred_at, label: '🚽 Bristol ' + x.bristol_type, detail: '' }))].filter(event => timelineFilter === 'all' || event.type === timelineFilter).sort((a, b) => new Date(b.t) - new Date(a.t)); $('timelineList').innerHTML = events.slice(0, 40).map(e => `<div class="entry"><strong>${esc(fmt(e.t))}</strong> · ${esc(e.label)}${e.detail ? ' · ' + esc(e.detail) : ''}</div>`).join('') || '<p class="muted">No records for this filter.</p>';
         }
         function missingColumn(error) { const match = String(error?.message || '').match(/Could not find the '([^']+)' column of '[^']+' in the schema cache/i); return match?.[1] || null }
         function supportedMealType(value) { const type = String(value || '').trim().toLowerCase(); return ['breakfast', 'lunch', 'dinner', 'snack', 'drink', 'other'].includes(type) ? type : 'other' }
@@ -599,6 +608,7 @@
         function num(v) { return v === '' || v == null ? null : Number(v) }
         for (const [id, form] of [['fclear', 'foodForm'], ['gclear', 'glucoseForm'], ['sclear', 'symForm'], ['bclear', 'bowelForm']]) $(id).onclick = () => { $(form).reset(); reset() };
         document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('active')); document.querySelectorAll('.pane').forEach(x => x.classList.add('hidden')); btn.classList.add('active'); $(btn.dataset.tab).classList.remove('hidden') });
+        $('timelineFilter').onchange = () => render();
         $('imp').addEventListener('change', async e => {
             const file = e.target.files?.[0]; if (!file) return; setMsg('migration', 'Reading V2 backup…'); try {
                 const text = await file.text(); const data = JSON.parse(text); if (Number(data.version) !== 2) throw new Error('This does not look like a V2 Gut Tracker JSON backup (version 2 expected).'); const foods = Array.isArray(data.foods) ? data.foods : [], syms = Array.isArray(data.symptoms) ? data.symptoms : []; const migrationState = await getMigrationState(); let mealCount = 0, foodCount = 0, symCount = 0, bowelCount = 0, skipped = 0, duplicateMealCount = 0, duplicateSymptomCount = 0, duplicateBowelCount = 0; for (const f of foods) { const dt = recordTime(f); if (!dt) { skipped++; continue } const originalMealType = pick(f, ['mealType', 'meal_type', 'meal', 'type']) || 'Other'; const normalizedMealType = supportedMealType(originalMealType); const foodName = String(pick(f, ['foods', 'food', 'whatDidYouEat', 'what', 'description']) || 'Unspecified'); if (hasImportedFood(migrationState, f, dt, normalizedMealType, foodName)) { duplicateMealCount++; continue } const marker = `[V2 migration:food:${f.id ?? dt}]`; const meal = await saveSilent('meals', { meal_time: dt, meal_type: normalizedMealType, estimated_carbohydrate_g: null, protein_estimate_g: null, notes: [f.notes, f.portion ? `V2 portion: ${f.portion}` : '', originalMealType.toLowerCase() === normalizedMealType ? '' : `V2 meal type: ${originalMealType}`].filter(Boolean).concat(marker).join(' · ') }); const triggers = pickArray(f, ['triggers', 'potentialTriggers', 'potential_triggers']); await insertWithSchemaFallback('meal_foods', { meal_id: meal.id, user_id: user.id, food_name: foodName, notes: [triggers.length ? 'V2 triggers: ' + triggers.join(', ') : '', marker].filter(Boolean).join(' · ') }); migrationState.meals.push({ id: meal.id, meal_time: dt, meal_type: normalizedMealType, notes: marker }); mealCount++; foodCount++ }
