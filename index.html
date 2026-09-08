@@ -194,6 +194,22 @@
             font-size: 12px
         }
 
+        .pager {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 12px
+        }
+
+        .pager select,
+        .pager button {
+            min-height: 36px;
+            width: auto;
+            padding: 6px 10px;
+            font-size: 12px
+        }
+
         .pill {
             display: inline-block;
             background: #eef3f0;
@@ -391,6 +407,7 @@
                     <div class="card">
                         <h2>Recent meals</h2>
                     <div id="flist"></div>
+                        <div class="pager"><label>Show <select data-page-size="meals"><option>10</option><option>25</option><option>50</option></select></label><div><button type="button" data-page-prev="meals">Previous</button><span class="muted" data-page-label="meals"></span><button type="button" data-page-next="meals">Next</button></div></div>
                 </div>
             </section>
 
@@ -441,6 +458,7 @@
                 <div class="card">
                     <h2>Recent readings</h2>
                     <div id="glist"></div>
+                    <div class="pager"><label>Show <select data-page-size="glucose"><option>10</option><option>25</option><option>50</option></select></label><div><button type="button" data-page-prev="glucose">Previous</button><span class="muted" data-page-label="glucose"></span><button type="button" data-page-next="glucose">Next</button></div></div>
                 </div>
             </section>
 
@@ -477,6 +495,7 @@
                 <div class="card">
                     <h2>Recent symptoms</h2>
                     <div id="slist"></div>
+                    <div class="pager"><label>Show <select data-page-size="symptoms"><option>10</option><option>25</option><option>50</option></select></label><div><button type="button" data-page-prev="symptoms">Previous</button><span class="muted" data-page-label="symptoms"></span><button type="button" data-page-next="symptoms">Next</button></div></div>
                 </div>
             </section>
 
@@ -513,6 +532,7 @@
                 <div class="card">
                     <h2>Recent bowel movements</h2>
                     <div id="blist"></div>
+                    <div class="pager"><label>Show <select data-page-size="bowels"><option>10</option><option>25</option><option>50</option></select></label><div><button type="button" data-page-prev="bowels">Previous</button><span class="muted" data-page-label="bowels"></span><button type="button" data-page-next="bowels">Next</button></div></div>
                 </div>
             </section>
 
@@ -587,7 +607,7 @@
         </div>
     </main>
     <script>
-        const VERSION = APP_VERSION, SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co'; let supabaseClient = null, user = null, meals = [], glucose = [], symptoms = [], bowels = [], mealFoods = []; const $ = id => document.getElementById(id); document.title += ` V${VERSION}`; document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${VERSION}` });
+        const VERSION = APP_VERSION, SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co'; let supabaseClient = null, user = null, meals = [], glucose = [], symptoms = [], bowels = [], mealFoods = []; const pageSize = { meals: 10, glucose: 10, symptoms: 10, bowels: 10 }, page = { meals: 0, glucose: 0, symptoms: 0, bowels: 0 }, totals = { meals: 0, glucose: 0, symptoms: 0, bowels: 0 }; const $ = id => document.getElementById(id); document.title += ` V${VERSION}`; document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${VERSION}` });
         function setSync(state, detail = '') { const labels = { connected: '🟢 connected', syncing: '🟠 syncing', error: '🔴 cloud error' }; const element = $('sync'); if (!element) return; element.textContent = labels[state]; element.title = detail || labels[state]; element.className = 'sync ' + state }
         function updateSetupLink() { const link = $('setupLink'); if (link) link.classList.remove('hidden') }
         function setupClient() { if (supabaseClient) return true; const key = getStoredSupabaseKey(); if (!isLikelySupabasePublishableKey(key)) return false; supabaseClient = window.supabase.createClient(SUPABASE_URL, key); return true }
@@ -598,17 +618,20 @@
         function showApp() { $('auth').classList.add('hidden'); $('app').classList.remove('hidden'); $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || '' }
         function fmt(v) { return v ? new Date(v).toLocaleString('en-GB') : '—' }
         function mealOptions() { const opts = meals.slice(0, 100).map(m => `<option value="${m.id}">${esc(fmt(m.meal_time))} · ${esc((m.meal_type || 'meal').replace(/^./, character => character.toUpperCase()))}</option>`).join(''); $('gmeal').innerHTML = '<option value="">None / unrelated</option>' + opts; $('smeal').innerHTML = '<option value="">None</option>' + opts }
-        async function loadGlucose() { const result = await supabaseClient.from('glucose_readings').select('*').order('reading_time', { ascending: false }); if (result.error && /glucose_readings.*(reading_time|does not exist|schema cache)|relation .*glucose_readings.*does not exist/i.test(result.error.message || '')) return []; if (result.error) throw result.error; return result.data || [] }
-        async function load() { setSync('syncing'); try { const [m, g, s, b, mf] = await Promise.all([supabaseClient.from('meals').select('*').order('meal_time', { ascending: false }), loadGlucose(), supabaseClient.from('gut_symptoms').select('*').order('occurred_at', { ascending: false }), supabaseClient.from('bowel_movements').select('*').order('occurred_at', { ascending: false }), supabaseClient.from('meal_foods').select('*')]); for (const r of [m, s, b, mf]) if (r.error) throw r.error; meals = m.data || []; glucose = g || []; symptoms = s.data || []; bowels = b.data || []; mealFoods = mf.data || []; render(); setSync('connected') } catch (error) { setSync('error'); throw error } }
+        async function loadPage(table, orderColumn, pageName) { const from = page[pageName] * pageSize[pageName], to = from + pageSize[pageName] - 1; const result = await supabaseClient.from(table).select('*', { count: 'exact' }).order(orderColumn, { ascending: false }).range(from, to); if (result.error) throw result.error; totals[pageName] = result.count || 0; return result.data || [] }
+        async function loadGlucose() { try { return await loadPage('glucose_readings', 'reading_time', 'glucose') } catch (error) { if (/glucose_readings.*(reading_time|does not exist|schema cache)|relation .*glucose_readings.*does not exist/i.test(error.message || '')) { totals.glucose = 0; return [] } throw error } }
+        async function load() { setSync('syncing'); try { const [m, g, s, b] = await Promise.all([loadPage('meals', 'meal_time', 'meals'), loadGlucose(), loadPage('gut_symptoms', 'occurred_at', 'symptoms'), loadPage('bowel_movements', 'occurred_at', 'bowels')]); for (const name of Object.keys(pageSize)) page[name] = Math.min(page[name], Math.max(0, Math.ceil(totals[name] / pageSize[name]) - 1)); const mealIds = m.map(meal => meal.id); const mf = mealIds.length ? await supabaseClient.from('meal_foods').select('*').in('meal_id', mealIds) : { data: [], error: null }; if (mf.error) throw mf.error; meals = m; glucose = g; symptoms = s; bowels = b; mealFoods = mf.data || []; render(); setSync('connected') } catch (error) { setSync('error'); throw error } }
         function render() {
-            $('mc').textContent = meals.length; $('gc').textContent = glucose.length; $('xc').textContent = symptoms.length; $('bcnt').textContent = bowels.length; $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || ''; mealOptions();
-            $('flist').innerHTML = meals.slice(0, 10).map(x => { const foods = mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', '); const mealType = (x.meal_type || '').replace(/^./, character => character.toUpperCase()); return `<div class="entry"><strong>${esc(fmt(x.meal_time))}</strong> · ${esc(mealType)}<div>${esc(foods || x.notes || '')}</div><div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="meals" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="meals" data-delete-id="${esc(x.id)}">Delete</button></div></div>` }).join('') || '<p class="muted">No meals yet.</p>';
-            $('glist').innerHTML = glucose.slice(0, 10).map(x => `<div class="entry"><strong>${esc(fmt(x.reading_time))}</strong> · ${esc(x.glucose_mmol_l)} mmol/L · ${esc(x.timing || '')}<div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="glucose_readings" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="glucose_readings" data-delete-id="${esc(x.id)}">Delete</button></div></div>`).join('') || '<p class="muted">No readings yet.</p>';
-            $('slist').innerHTML = symptoms.slice(0, 10).map(x => `<div class="entry"><strong>${esc(fmt(x.occurred_at))}</strong> · ${esc(x.symptom_type || '')} · ${esc(x.severity ?? 0)}/10<div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="gut_symptoms" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="gut_symptoms" data-delete-id="${esc(x.id)}">Delete</button></div></div>`).join('') || '<p class="muted">No symptoms yet.</p>';
-            $('blist').innerHTML = bowels.slice(0, 10).map(x => `<div class="entry"><strong>${esc(fmt(x.occurred_at))}</strong> · Bristol ${esc(x.bristol_type)}<div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="bowel_movements" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="bowel_movements" data-delete-id="${esc(x.id)}">Delete</button></div></div>`).join('') || '<p class="muted">No bowel movements yet.</p>';
+            $('mc').textContent = totals.meals; $('gc').textContent = totals.glucose; $('xc').textContent = totals.symptoms; $('bcnt').textContent = totals.bowels; $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || ''; mealOptions();
+            $('flist').innerHTML = meals.map(x => { const foods = mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', '); const mealType = (x.meal_type || '').replace(/^./, character => character.toUpperCase()); return `<div class="entry"><strong>${esc(fmt(x.meal_time))}</strong> · ${esc(mealType)}<div>${esc(foods || x.notes || '')}</div><div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="meals" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="meals" data-delete-id="${esc(x.id)}">Delete</button></div></div>` }).join('') || '<p class="muted">No meals yet.</p>';
+            $('glist').innerHTML = glucose.map(x => `<div class="entry"><strong>${esc(fmt(x.reading_time))}</strong> · ${esc(x.glucose_mmol_l)} mmol/L · ${esc(x.timing || '')}<div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="glucose_readings" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="glucose_readings" data-delete-id="${esc(x.id)}">Delete</button></div></div>`).join('') || '<p class="muted">No readings yet.</p>';
+            $('slist').innerHTML = symptoms.map(x => `<div class="entry"><strong>${esc(fmt(x.occurred_at))}</strong> · ${esc(x.symptom_type || '')} · ${esc(x.severity ?? 0)}/10<div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="gut_symptoms" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="gut_symptoms" data-delete-id="${esc(x.id)}">Delete</button></div></div>`).join('') || '<p class="muted">No symptoms yet.</p>';
+            $('blist').innerHTML = bowels.map(x => `<div class="entry"><strong>${esc(fmt(x.occurred_at))}</strong> · Bristol ${esc(x.bristol_type)}<div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="bowel_movements" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="bowel_movements" data-delete-id="${esc(x.id)}">Delete</button></div></div>`).join('') || '<p class="muted">No bowel movements yet.</p>';
+            updatePagers();
             const vals = glucose.map(x => Number(x.glucose_mmol_l)).filter(Number.isFinite); $('gsummary').textContent = vals.length ? `Average recorded glucose: ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)} mmol/L · Latest: ${vals[0].toFixed(1)} mmol/L` : 'Add spot readings to see your recent pattern.';
             const timelineFilter = $('timelineFilter')?.value || 'all'; const events = [...meals.map(x => ({ type: 'food', t: x.meal_time, label: '🍽️ ' + (x.meal_type || 'Meal').replace(/^./, character => character.toUpperCase()), detail: mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })), ...glucose.map(x => ({ type: 'glucose', t: x.reading_time, label: '🩸 ' + x.glucose_mmol_l + ' mmol/L', detail: x.timing || '' })), ...symptoms.map(x => ({ type: 'gut', t: x.occurred_at, label: '🫃 ' + (x.symptom_type || 'Symptom'), detail: (x.severity ?? 0) + '/10' })), ...bowels.map(x => ({ type: 'bowel', t: x.occurred_at, label: '🚽 Bristol ' + x.bristol_type, detail: '' }))].filter(event => timelineFilter === 'all' || event.type === timelineFilter).sort((a, b) => new Date(b.t) - new Date(a.t)); $('timelineList').innerHTML = events.slice(0, 40).map(e => `<div class="entry"><strong>${esc(fmt(e.t))}</strong> · ${esc(e.label)}${e.detail ? ' · ' + esc(e.detail) : ''}</div>`).join('') || '<p class="muted">No records for this filter.</p>';
         }
+        function updatePagers() { for (const name of Object.keys(pageSize)) { const totalPages = Math.max(1, Math.ceil(totals[name] / pageSize[name])); const label = document.querySelector(`[data-page-label="${name}"]`); const previous = document.querySelector(`[data-page-prev="${name}"]`); const next = document.querySelector(`[data-page-next="${name}"]`); if (label) label.textContent = ` ${page[name] + 1} / ${totalPages} `; if (previous) previous.disabled = page[name] === 0; if (next) next.disabled = page[name] >= totalPages - 1 } }
         function missingColumn(error) { const match = String(error?.message || '').match(/Could not find the '([^']+)' column of '[^']+' in the schema cache/i); return match?.[1] || null }
         function supportedMealType(value) { const type = String(value || '').trim().toLowerCase(); return ['breakfast', 'lunch', 'dinner', 'snack', 'drink', 'other'].includes(type) ? type : 'other' }
         async function getMigrationState() { const [mealResult, foodResult, symptomResult, bowelResult] = await Promise.all([supabaseClient.from('meals').select('id,meal_time,meal_type,notes'), supabaseClient.from('meal_foods').select('meal_id,food_name,notes'), supabaseClient.from('gut_symptoms').select('id,occurred_at,symptom_type,severity,notes'), supabaseClient.from('bowel_movements').select('id,occurred_at,bristol_type,notes')]); if (mealResult.error) throw mealResult.error; if (foodResult.error) throw foodResult.error; if (symptomResult.error) throw symptomResult.error; if (bowelResult.error) throw bowelResult.error; return { meals: mealResult.data || [], foods: foodResult.data || [], symptoms: symptomResult.data || [], bowels: bowelResult.data || [] } }
@@ -632,6 +655,8 @@
         for (const [id, form] of [['fclear', 'foodForm'], ['gclear', 'glucoseForm'], ['sclear', 'symForm'], ['bclear', 'bowelForm']]) $(id).onclick = () => { editState = null; $(form).reset(); reset() };
         document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('active')); document.querySelectorAll('.pane').forEach(x => x.classList.add('hidden')); btn.classList.add('active'); $(btn.dataset.tab).classList.remove('hidden') });
         ['flist', 'glist', 'slist', 'blist'].forEach(id => $(id).onclick = event => { const editButton = event.target.closest('[data-edit-table]'); if (editButton) { openEditForm(editButton.dataset.editTable, editButton.dataset.editId); return } const deleteButton = event.target.closest('[data-delete-table]'); if (deleteButton) deleteEntry(deleteButton.dataset.deleteTable, deleteButton.dataset.deleteId) });
+        document.querySelectorAll('[data-page-size]').forEach(control => control.onchange = () => { const name = control.dataset.pageSize; page[name] = 0; pageSize[name] = Number(control.value); load().catch(error => setSync('error', error.message)) });
+        document.querySelectorAll('[data-page-prev], [data-page-next]').forEach(control => control.onclick = () => { const name = control.dataset.pagePrev || control.dataset.pageNext; const direction = control.dataset.pagePrev ? -1 : 1; page[name] = Math.max(0, page[name] + direction); load().catch(error => setSync('error', error.message)) });
         $('timelineFilter').onchange = () => render();
         $('imp').addEventListener('change', async e => {
             const file = e.target.files?.[0]; if (!file) return; setMsg('migration', 'Reading V2 backup…'); try {
