@@ -1,80 +1,586 @@
 <!doctype html>
 <html lang="en-GB">
+
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1f6f5c"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Gut + Glucose">
-<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><title>Gut + Glucose Tracker V3.2.0</title>
-<style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17221e;background:#f5f7f6;--g:#1f6f5c;--b:#d9e1dd;--m:#61716b;--r:#9b2c2c}*{box-sizing:border-box}body{margin:0}main{max-width:820px;margin:auto;padding:18px 16px 50px}h1{font-size:27px;margin:4px 0}.sub,.muted{color:var(--m)}.muted{font-size:13px}nav{display:flex;gap:8px;overflow:auto;margin:14px 0}button{min-height:44px;border:1px solid var(--b);border-radius:12px;padding:9px 14px;background:#fff;font-weight:650;color:#17221e;cursor:pointer}button.primary{background:var(--g);border-color:var(--g);color:#fff}button.github{background:#24292f;border-color:#24292f;color:#fff;width:100%}button.danger{color:var(--r)}button.tab.active{background:#e6f1ed;border-color:#a8c7bc}.card{background:#fff;border:1px solid var(--b);border-radius:16px;padding:16px;margin-bottom:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}input,select,textarea{width:100%;min-height:44px;border:1px solid var(--b);border-radius:11px;padding:10px 12px;font:inherit;background:#fff}textarea{min-height:78px}.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px}.check{display:flex;align-items:center;gap:8px;min-height:42px;font-weight:500}.check input{width:20px}.row{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}.entry{border-top:1px solid var(--b);padding:13px 0}.entry:first-child{border-top:0}.pill{display:inline-block;background:#eef3f0;border-radius:999px;padding:4px 8px;font-size:12px;margin:2px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.metricbox{border:1px solid var(--b);border-radius:12px;padding:12px}.metric{font-size:24px;font-weight:750}.auth{max-width:520px;margin:35px auto}.ok{color:#176b4f}.err{color:#9b2c2c}.glucose{font-size:30px;font-weight:800}.sync{font-size:12px;padding:4px 8px;border-radius:999px;background:#eef3f0}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px}.version{margin:28px 0 4px;text-align:center;font-size:12px;color:var(--m);opacity:.9;font-weight:600}.hint{margin-top:6px}.filebtn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--b);border-radius:12px;padding:9px 14px;background:#fff;font-weight:650;cursor:pointer}@media(max-width:600px){.grid,.checks{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}}
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#1f6f5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Gut + Glucose">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Gut + Glucose Tracker</title>
+    <style>
+        :root {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #17221e;
+            background: #f5f7f6;
+            --g: #1f6f5c;
+            --b: #d9e1dd;
+            --m: #61716b;
+            --r: #9b2c2c
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0
+        }
+
+        main {
+            max-width: 820px;
+            margin: auto;
+            padding: 18px 16px 50px
+        }
+
+        h1 {
+            font-size: 27px;
+            margin: 4px 0
+        }
+
+        .sub,
+        .muted {
+            color: var(--m)
+        }
+
+        .muted {
+            font-size: 13px
+        }
+
+        nav {
+            display: flex;
+            gap: 8px;
+            overflow: auto;
+            margin: 14px 0
+        }
+
+        button {
+            min-height: 44px;
+            border: 1px solid var(--b);
+            border-radius: 12px;
+            padding: 9px 14px;
+            background: #fff;
+            font-weight: 650;
+            color: #17221e;
+            cursor: pointer
+        }
+
+        button.primary {
+            background: var(--g);
+            border-color: var(--g);
+            color: #fff
+        }
+
+        button.github {
+            background: #24292f;
+            border-color: #24292f;
+            color: #fff;
+            width: 100%
+        }
+
+        button.danger {
+            color: var(--r)
+        }
+
+        button.tab.active {
+            background: #e6f1ed;
+            border-color: #a8c7bc
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--b);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 14px
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px
+        }
+
+        .full {
+            grid-column: 1/-1
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 6px
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            min-height: 44px;
+            border: 1px solid var(--b);
+            border-radius: 11px;
+            padding: 10px 12px;
+            font: inherit;
+            background: #fff
+        }
+
+        textarea {
+            min-height: 78px
+        }
+
+        .checks {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px
+        }
+
+        .check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 42px;
+            font-weight: 500
+        }
+
+        .check input {
+            width: 20px
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .hidden {
+            display: none !important
+        }
+
+        .entry {
+            border-top: 1px solid var(--b);
+            padding: 13px 0
+        }
+
+        .entry:first-child {
+            border-top: 0
+        }
+
+        .pill {
+            display: inline-block;
+            background: #eef3f0;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 12px;
+            margin: 2px
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px
+        }
+
+        .metricbox {
+            border: 1px solid var(--b);
+            border-radius: 12px;
+            padding: 12px
+        }
+
+        .metric {
+            font-size: 24px;
+            font-weight: 750
+        }
+
+        .auth {
+            max-width: 520px;
+            margin: 35px auto
+        }
+
+        .ok {
+            color: #176b4f
+        }
+
+        .err {
+            color: #9b2c2c
+        }
+
+        .glucose {
+            font-size: 30px;
+            font-weight: 800
+        }
+
+        .sync {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #eef3f0
+        }
+
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px
+        }
+
+        .version {
+            margin: 28px 0 4px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--m);
+            opacity: .9;
+            font-weight: 600
+        }
+
+        .hint {
+            margin-top: 6px
+        }
+
+        .filebtn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            border: 1px solid var(--b);
+            border-radius: 12px;
+            padding: 9px 14px;
+            background: #fff;
+            font-weight: 650;
+            cursor: pointer
+        }
+
+        @media(max-width:600px) {
+
+            .grid,
+            .checks {
+                grid-template-columns: 1fr
+            }
+
+            .metrics {
+                grid-template-columns: 1fr 1fr
+            }
+        }
+    </style>
+    <script src="./version.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body><main>
-<div id="auth" class="auth card">
-<h1>Gut + Glucose V3</h1><p class="sub">Your data is stored in your private Supabase database.</p>
-<div class="grid"><div class="full"><label>Email</label><input id="email" type="email" autocomplete="email"></div><div class="full"><label>Password</label><input id="password" type="password" autocomplete="current-password"></div></div>
-<div class="row" style="margin-top:14px"><button id="login" class="primary">Sign in with email</button><button id="signup">Create email account</button></div>
-<div style="margin-top:10px"><button id="github" class="github">Continue with GitHub</button></div>
-<p id="authmsg" class="muted"></p><p class="muted">For GitHub sign-in, your Supabase project must have GitHub enabled under Authentication → Providers. Never enter a Supabase service/secret key.</p>
-</div>
 
-<div id="app" class="hidden">
-<header><div class="section-title"><div><h1>Gut + Glucose</h1><p class="sub">V3 · Supabase-backed spot glucose + gut diary</p></div><span id="sync" class="sync">Cloud</span></div></header>
-<nav><button class="tab active" data-tab="food">🍽️ Food</button><button class="tab" data-tab="glucose">🩸 Glucose</button><button class="tab" data-tab="symptoms">🫃 Gut</button><button class="tab" data-tab="bowel">🚽 Bowel</button><button class="tab" data-tab="timeline">🕒 Timeline</button><button class="tab" data-tab="insights">📊 Insights</button><button class="tab" data-tab="data">☁️ Data</button></nav>
+<body>
+    <main>
+        <div id="auth" class="auth card">
+            <h1>Gut + Glucose V3</h1>
+            <p class="sub">Your data is stored in your private Supabase database.</p>
+            <div class="grid">
+                <div class="full"><label>Email</label><input id="email" type="email" autocomplete="email"></div>
+                <div class="full"><label>Password</label><input id="password" type="password"
+                        autocomplete="current-password"></div>
+            </div>
+            <div class="row" style="margin-top:14px"><button id="login" class="primary">Sign in with
+                    email</button><button id="signup">Create email account</button></div>
+            <div style="margin-top:10px"><button id="github" class="github">Continue with GitHub</button></div>
+            <p id="authmsg" class="muted"></p>
+            <p class="muted">For GitHub sign-in, your Supabase project must have GitHub enabled under Authentication →
+                Providers. Never enter a Supabase service/secret key.</p>
+        </div>
 
-<section id="food" class="pane"><form id="foodForm" class="card"><h2>Record meal</h2><div class="grid"><div><label>Date</label><input id="fd" type="date" required></div><div><label>Time</label><input id="ft" type="time" required></div><div><label>Meal</label><select id="fm"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option><option>Drink</option><option>Other</option></select></div><div><label>Portion</label><select id="fp"><option>Small</option><option selected>Normal</option><option>Large</option></select></div><div><label>Estimated carbs (g)</label><input id="fcg" type="number" min="0" step="1"></div><div><label>Protein (g, optional)</label><input id="fpg" type="number" min="0" step="1"></div><div class="full"><label>What did you eat?</label><textarea id="foods" placeholder="e.g. chicken, rice, vegetables"></textarea></div></div><div style="margin-top:14px"><label>Potential triggers</label><div class="checks"><label class="check"><input type="checkbox" value="FODMAPs – fruit">🍎 FODMAPs – fruit</label><label class="check"><input type="checkbox" value="FODMAPs – dairy/lactose">🥛 FODMAPs – dairy/lactose</label><label class="check"><input type="checkbox" value="FODMAPs – wheat/fructans">🌾 FODMAPs – wheat/fructans</label><label class="check"><input type="checkbox" value="FODMAPs – onion/garlic">🧄 FODMAPs – onion/garlic</label><label class="check"><input type="checkbox" value="FODMAPs – beans/lentils (GOS)">🫘 FODMAPs – beans/lentils</label><label class="check"><input type="checkbox" value="FODMAPs – polyols">🍄 FODMAPs – polyols</label><label class="check"><input type="checkbox" value="FODMAPs – sweeteners">🍬 FODMAPs – sweeteners</label><label class="check"><input type="checkbox" value="Caffeine">Caffeine</label><label class="check"><input type="checkbox" value="Sweeteners">Sweeteners</label><label class="check"><input type="checkbox" value="High fat">High fat</label><label class="check"><input type="checkbox" value="Large portion">Large portion</label></div></div><div style="margin-top:14px"><label>Notes</label><textarea id="fn" placeholder="Anything unusual?"></textarea></div><div class="row" style="margin-top:14px"><button class="primary">Save meal</button><button type="button" id="fclear">Clear</button></div><p id="fs" class="muted"></p></form><div class="card"><h2>Recent meals</h2><div id="flist"></div></div></section>
+        <div id="app" class="hidden">
+            <header>
+                <div class="section-title">
+                    <div>
+                        <h1>Gut + Glucose</h1>
+                        <p class="sub">V3 · Supabase-backed spot glucose + gut diary</p>
+                    </div><span id="sync" class="sync">Cloud</span>
+                </div>
+            </header>
+            <nav><button class="tab active" data-tab="food">🍽️ Food</button><button class="tab" data-tab="glucose">🩸
+                    Glucose</button><button class="tab" data-tab="symptoms">🫃 Gut</button><button class="tab"
+                    data-tab="bowel">🚽 Bowel</button><button class="tab" data-tab="timeline">🕒
+                    Timeline</button><button class="tab" data-tab="insights">📊 Insights</button><button class="tab"
+                    data-tab="data">☁️ Data</button></nav>
 
-<section id="glucose" class="pane hidden"><form id="glucoseForm" class="card"><h2>🩸 Spot glucose</h2><p class="muted">Finger-prick reading in mmol/L. Use this for targeted checks around meals rather than continuous monitoring.</p><div class="grid"><div><label>Date</label><input id="gd" type="date" required></div><div><label>Time</label><input id="gt" type="time" required></div><div><label>Glucose (mmol/L)</label><input id="gv" class="glucose" type="number" min="1" max="40" step="0.1" required></div><div><label>Timing</label><select id="gtime"><option value="fasting">Fasting</option><option value="before_meal">Before meal</option><option value="30_min_after">30 min after</option><option value="1_hour_after">1 hour after</option><option value="2_hours_after">2 hours after</option><option value="3_hours_after">3 hours after</option><option value="bedtime">Bedtime</option><option value="random">Random</option><option value="other">Other</option></select></div><div><label>Meter name (optional)</label><input id="gm"></div><div><label>Related meal</label><select id="gmeal"><option value="">None / unrelated</option></select></div><div><label>Context</label><select id="gctx"><option value="normal">Normal</option><option value="exercise">Exercise</option><option value="illness">Illness</option><option value="poor_sleep">Poor sleep</option><option value="stress">Stress</option><option value="alcohol">Alcohol</option><option value="unusual_meal">Unusual meal</option><option value="other">Other</option></select></div><div><label>Minutes from meal</label><input id="gmin" type="number" step="1"></div><div><label>Estimated meal carbs (g)</label><input id="gcg" type="number" min="0" step="1"></div><div class="full"><label>Notes</label><textarea id="gn"></textarea></div></div><div class="row" style="margin-top:14px"><button class="primary">Save glucose</button><button type="button" id="gclear">Clear</button></div><p id="gs" class="muted"></p></form><div class="card"><h2>Recent readings</h2><div id="glist"></div></div></section>
+            <section id="food" class="pane">
+                <form id="foodForm" class="card">
+                    <h2>Record meal</h2>
+                    <div class="grid">
+                        <div><label>Date</label><input id="fd" type="date" required></div>
+                        <div><label>Time</label><input id="ft" type="time" required></div>
+                        <div><label>Meal</label><select id="fm">
+                                <option>Breakfast</option>
+                                <option>Lunch</option>
+                                <option>Dinner</option>
+                                <option>Snack</option>
+                                <option>Drink</option>
+                                <option>Other</option>
+                            </select></div>
+                        <div><label>Portion</label><select id="fp">
+                                <option>Small</option>
+                                <option selected>Normal</option>
+                                <option>Large</option>
+                            </select></div>
+                        <div><label>Estimated carbs (g)</label><input id="fcg" type="number" min="0" step="1"></div>
+                        <div><label>Protein (g, optional)</label><input id="fpg" type="number" min="0" step="1"></div>
+                        <div class="full"><label>What did you eat?</label><textarea id="foods"
+                                placeholder="e.g. chicken, rice, vegetables"></textarea></div>
+                    </div>
+                    <div style="margin-top:14px"><label>Potential triggers</label>
+                        <div class="checks"><label class="check"><input type="checkbox" value="FODMAPs – fruit">🍎
+                                FODMAPs – fruit</label><label class="check"><input type="checkbox"
+                                    value="FODMAPs – dairy/lactose">🥛 FODMAPs – dairy/lactose</label><label
+                                class="check"><input type="checkbox" value="FODMAPs – wheat/fructans">🌾 FODMAPs –
+                                wheat/fructans</label><label class="check"><input type="checkbox"
+                                    value="FODMAPs – onion/garlic">🧄 FODMAPs – onion/garlic</label><label
+                                class="check"><input type="checkbox" value="FODMAPs – beans/lentils (GOS)">🫘 FODMAPs –
+                                beans/lentils</label><label class="check"><input type="checkbox"
+                                    value="FODMAPs – polyols">🍄 FODMAPs – polyols</label><label class="check"><input
+                                    type="checkbox" value="FODMAPs – sweeteners">🍬 FODMAPs – sweeteners</label><label
+                                class="check"><input type="checkbox" value="Caffeine">Caffeine</label><label
+                                class="check"><input type="checkbox" value="Sweeteners">Sweeteners</label><label
+                                class="check"><input type="checkbox" value="High fat">High fat</label><label
+                                class="check"><input type="checkbox" value="Large portion">Large portion</label></div>
+                    </div>
+                    <div style="margin-top:14px"><label>Notes</label><textarea id="fn"
+                            placeholder="Anything unusual?"></textarea></div>
+                    <div class="row" style="margin-top:14px"><button class="primary">Save meal</button><button
+                            type="button" id="fclear">Clear</button></div>
+                    <p id="fs" class="muted"></p>
+                </form>
+                <div class="card">
+                    <h2>Recent meals</h2>
+                    <div id="flist"></div>
+                </div>
+            </section>
 
-<section id="symptoms" class="pane hidden"><form id="symForm" class="card"><h2>🫃 Gut symptoms</h2><div class="grid"><div><label>Date</label><input id="sd" type="date" required></div><div><label>Time</label><input id="st" type="time" required></div><div><label>Symptom</label><select id="stype"><option>bloating</option><option>abdominal_pain</option><option>gas</option><option>gurgling</option><option>urgency</option><option>nausea</option><option>reflux</option><option>constipation</option><option>diarrhoea</option><option>other</option></select></div><div><label>Severity (0–10)</label><input id="sev" type="number" min="0" max="10" value="0"></div><div><label>Duration (minutes)</label><input id="dur" type="number" min="0"></div><div><label>Related meal</label><select id="smeal"><option value="">None</option></select></div><div class="full"><label>Notes</label><textarea id="sn"></textarea></div></div><div class="row" style="margin-top:14px"><button class="primary">Save symptom</button><button type="button" id="sclear">Clear</button></div><p id="sts" class="muted"></p></form><div class="card"><h2>Recent symptoms</h2><div id="slist"></div></div></section>
+            <section id="glucose" class="pane hidden">
+                <form id="glucoseForm" class="card">
+                    <h2>🩸 Spot glucose</h2>
+                    <p class="muted">Finger-prick reading in mmol/L. Use this for targeted checks around meals rather
+                        than continuous monitoring.</p>
+                    <div class="grid">
+                        <div><label>Date</label><input id="gd" type="date" required></div>
+                        <div><label>Time</label><input id="gt" type="time" required></div>
+                        <div><label>Glucose (mmol/L)</label><input id="gv" class="glucose" type="number" min="1"
+                                max="40" step="0.1" required></div>
+                        <div><label>Timing</label><select id="gtime">
+                                <option value="fasting">Fasting</option>
+                                <option value="before_meal">Before meal</option>
+                                <option value="30_min_after">30 min after</option>
+                                <option value="1_hour_after">1 hour after</option>
+                                <option value="2_hours_after">2 hours after</option>
+                                <option value="3_hours_after">3 hours after</option>
+                                <option value="bedtime">Bedtime</option>
+                                <option value="random">Random</option>
+                                <option value="other">Other</option>
+                            </select></div>
+                        <div><label>Meter name (optional)</label><input id="gm"></div>
+                        <div><label>Related meal</label><select id="gmeal">
+                                <option value="">None / unrelated</option>
+                            </select></div>
+                        <div><label>Context</label><select id="gctx">
+                                <option value="normal">Normal</option>
+                                <option value="exercise">Exercise</option>
+                                <option value="illness">Illness</option>
+                                <option value="poor_sleep">Poor sleep</option>
+                                <option value="stress">Stress</option>
+                                <option value="alcohol">Alcohol</option>
+                                <option value="unusual_meal">Unusual meal</option>
+                                <option value="other">Other</option>
+                            </select></div>
+                        <div><label>Minutes from meal</label><input id="gmin" type="number" step="1"></div>
+                        <div><label>Estimated meal carbs (g)</label><input id="gcg" type="number" min="0" step="1">
+                        </div>
+                        <div class="full"><label>Notes</label><textarea id="gn"></textarea></div>
+                    </div>
+                    <div class="row" style="margin-top:14px"><button class="primary">Save glucose</button><button
+                            type="button" id="gclear">Clear</button></div>
+                    <p id="gs" class="muted"></p>
+                </form>
+                <div class="card">
+                    <h2>Recent readings</h2>
+                    <div id="glist"></div>
+                </div>
+            </section>
 
-<section id="bowel" class="pane hidden"><form id="bowelForm" class="card"><h2>🚽 Bowel movement</h2><div class="grid"><div><label>Date</label><input id="bd" type="date" required></div><div><label>Time</label><input id="bt" type="time" required></div><div><label>Bristol type</label><select id="br"><option value="1">1 – Hard pellets</option><option value="2">2 – Lumpy/firm</option><option value="3">3 – Cracked sausage</option><option value="4" selected>4 – Smooth sausage</option><option value="5">5 – Soft pieces</option><option value="6">6 – Mushy</option><option value="7">7 – Watery</option></select></div><div><label>Urgency (0–10)</label><input id="bu" type="number" min="0" max="10" value="0"></div><div><label>Completeness (0–10)</label><input id="bc" type="number" min="0" max="10" value="10"></div><div><label>Difficulty (0–10)</label><input id="bdi" type="number" min="0" max="10" value="0"></div><div><label>Straining</label><select id="bst"><option value="false">No</option><option value="true">Yes</option></select></div><div class="full"><label>Notes</label><textarea id="bn"></textarea></div></div><div class="row" style="margin-top:14px"><button class="primary">Save bowel movement</button><button type="button" id="bclear">Clear</button></div><p id="bs" class="muted"></p></form><div class="card"><h2>Recent bowel movements</h2><div id="blist"></div></div></section>
+            <section id="symptoms" class="pane hidden">
+                <form id="symForm" class="card">
+                    <h2>🫃 Gut symptoms</h2>
+                    <div class="grid">
+                        <div><label>Date</label><input id="sd" type="date" required></div>
+                        <div><label>Time</label><input id="st" type="time" required></div>
+                        <div><label>Symptom</label><select id="stype">
+                                <option>bloating</option>
+                                <option>abdominal_pain</option>
+                                <option>gas</option>
+                                <option>gurgling</option>
+                                <option>urgency</option>
+                                <option>nausea</option>
+                                <option>reflux</option>
+                                <option>constipation</option>
+                                <option>diarrhoea</option>
+                                <option>other</option>
+                            </select></div>
+                        <div><label>Severity (0–10)</label><input id="sev" type="number" min="0" max="10" value="0">
+                        </div>
+                        <div><label>Duration (minutes)</label><input id="dur" type="number" min="0"></div>
+                        <div><label>Related meal</label><select id="smeal">
+                                <option value="">None</option>
+                            </select></div>
+                        <div class="full"><label>Notes</label><textarea id="sn"></textarea></div>
+                    </div>
+                    <div class="row" style="margin-top:14px"><button class="primary">Save symptom</button><button
+                            type="button" id="sclear">Clear</button></div>
+                    <p id="sts" class="muted"></p>
+                </form>
+                <div class="card">
+                    <h2>Recent symptoms</h2>
+                    <div id="slist"></div>
+                </div>
+            </section>
 
-<section id="timeline" class="pane hidden"><div class="card"><h2>🕒 Timeline</h2><p class="muted">Cloud records in chronological order. Relationships are associations, not proof of causation.</p><div id="timelineList"></div></div></section>
-<section id="insights" class="pane hidden"><div class="card"><h2>📊 Overview</h2><div class="metrics"><div class="metricbox"><div class="muted">Meals</div><div id="mc" class="metric">0</div></div><div class="metricbox"><div class="muted">Glucose</div><div id="gc" class="metric">0</div></div><div class="metricbox"><div class="muted">Symptoms</div><div id="xc" class="metric">0</div></div><div class="metricbox"><div class="muted">Bowel</div><div id="bcnt" class="metric">0</div></div></div></div><div class="card"><h2>Glucose snapshot</h2><div id="gsummary" class="muted">Add spot readings to see your recent pattern.</div></div><div class="card"><h2>Trigger associations</h2><p class="muted">Counts symptoms occurring within 24 hours after meals tagged with each trigger. This is pattern-finding, not diagnosis.</p><div id="analysis"></div></div></section>
-<section id="data" class="pane hidden"><div class="card"><h2>☁️ Cloud data & migration</h2><p class="muted">Supabase is the primary store. Import your existing V2 JSON backup here. Importing never deletes existing cloud data.</p><div class="row"><label class="filebtn">Import V2 JSON<input id="imp" type="file" accept="application/json,.json" hidden></label><button id="export">Export current cloud JSON</button><button id="signout" class="danger">Sign out</button></div><p id="migration" class="muted hint"></p></div><div class="card"><h2>Connection</h2><p id="userInfo" class="muted"></p><p class="muted">Supabase URL is built into this app. Your publishable key stays in this browser only.</p></div></section>
-<footer class="version">Gut + Glucose Tracker · Version V3.2.0</footer>
-</div></main>
-<script>
-const VERSION='3.2.0',SUPABASE_URL='https://sywbgjdxptvwtjfrjgfk.supabase.co';let supabaseClient=null,user=null,meals=[],glucose=[],symptoms=[],bowels=[],mealFoods=[];const $=id=>document.getElementById(id);
-function setupClient(){if(supabaseClient)return true;const key=localStorage.getItem('gut_tracker_publishable_key')||'';if(!key)return false;supabaseClient=window.supabase.createClient(SUPABASE_URL,key);return true}
-function setMsg(id,text,cls=''){const e=$(id);if(!e)return;e.textContent=text;e.className='muted '+cls}
-function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function localIso(date,time){return new Date(`${date}T${time||'00:00'}`).toISOString()}
-function reset(){const now=new Date(),d=now.toISOString().slice(0,10),t=now.toTimeString().slice(0,5);for(const [a,b] of [['fd','ft'],['gd','gt'],['sd','st'],['bd','bt']]){$(a).value=d;$(b).value=t}}
-function showApp(){ $('auth').classList.add('hidden');$('app').classList.remove('hidden');$('userInfo').textContent=user?.email||user?.user_metadata?.user_name||'' }
-function fmt(v){return v?new Date(v).toLocaleString('en-GB'):'—'}
-function mealOptions(){const opts=meals.slice(0,100).map(m=>`<option value="${m.id}">${esc(fmt(m.meal_time))} · ${esc(m.meal_type||'Meal')}</option>`).join('');$('gmeal').innerHTML='<option value="">None / unrelated</option>'+opts;$('smeal').innerHTML='<option value="">None</option>'+opts}
-async function load(){const [m,g,s,b,mf]=await Promise.all([supabaseClient.from('meals').select('*').order('meal_time',{ascending:false}),supabaseClient.from('glucose_readings').select('*').order('reading_time',{ascending:false}),supabaseClient.from('gut_symptoms').select('*').order('symptom_time',{ascending:false}),supabaseClient.from('bowel_movements').select('*').order('movement_time',{ascending:false}),supabaseClient.from('meal_foods').select('*')]);for(const r of [m,g,s,b,mf])if(r.error)throw r.error;meals=m.data||[];glucose=g.data||[];symptoms=s.data||[];bowels=b.data||[];mealFoods=mf.data||[];render()}
-function render(){
-$('mc').textContent=meals.length;$('gc').textContent=glucose.length;$('xc').textContent=symptoms.length;$('bcnt').textContent=bowels.length;$('userInfo').textContent=user?.email||user?.user_metadata?.user_name||'';mealOptions();
-$('flist').innerHTML=meals.slice(0,10).map(x=>{const foods=mealFoods.filter(f=>f.meal_id===x.id).map(f=>f.food_name).filter(Boolean).join(', ');return `<div class="entry"><strong>${esc(fmt(x.meal_time))}</strong> · ${esc(x.meal_type||'')}</div><div>${esc(foods||x.notes||'')}</div>`}).join('')||'<p class="muted">No meals yet.</p>';
-$('glist').innerHTML=glucose.slice(0,10).map(x=>`<div class="entry"><strong>${esc(fmt(x.reading_time))}</strong> · ${esc(x.glucose_mmol_l)} mmol/L · ${esc(x.timing||'')}</div>`).join('')||'<p class="muted">No readings yet.</p>';
-$('slist').innerHTML=symptoms.slice(0,10).map(x=>`<div class="entry"><strong>${esc(fmt(x.symptom_time))}</strong> · ${esc(x.symptom_type||'')} · ${esc(x.severity??0)}/10</div>`).join('')||'<p class="muted">No symptoms yet.</p>';
-$('blist').innerHTML=bowels.slice(0,10).map(x=>`<div class="entry"><strong>${esc(fmt(x.movement_time))}</strong> · Bristol ${esc(x.bristol_type)}</div>`).join('')||'<p class="muted">No bowel movements yet.</p>';
-const vals=glucose.map(x=>Number(x.glucose_mmol_l)).filter(Number.isFinite);$('gsummary').textContent=vals.length?`Average recorded glucose: ${(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)} mmol/L · Latest: ${vals[0].toFixed(1)} mmol/L`:'Add spot readings to see your recent pattern.';
-const events=[...meals.map(x=>({t:x.meal_time,label:'🍽️ '+(x.meal_type||'Meal'),detail:mealFoods.filter(f=>f.meal_id===x.id).map(f=>f.food_name).filter(Boolean).join(', ')})),...glucose.map(x=>({t:x.reading_time,label:'🩸 '+x.glucose_mmol_l+' mmol/L',detail:x.timing||''})),...symptoms.map(x=>({t:x.symptom_time,label:'🫃 '+(x.symptom_type||'Symptom'),detail:(x.severity??0)+'/10'})),...bowels.map(x=>({t:x.movement_time,label:'🚽 Bristol '+x.bristol_type,detail:''}))].sort((a,b)=>new Date(b.t)-new Date(a.t));$('timelineList').innerHTML=events.slice(0,40).map(e=>`<div class="entry"><strong>${esc(fmt(e.t))}</strong> · ${esc(e.label)}${e.detail?' · '+esc(e.detail):''}</div>`).join('')||'<p class="muted">No records yet.</p>';
-}
-async function save(table,payload,msgId){const {data,error}=await supabaseClient.from(table).insert({...payload,user_id:user.id}).select().single();if(error)throw error;setMsg(msgId,'Saved to cloud.','ok');await load();return data}
-async function saveSilent(table,payload){let p={...payload};let r=await supabaseClient.from(table).insert({...p,user_id:user.id}).select().single();if(r.error&&table==='meals'&&/estimated_carbs_g|protein_g.*schema cache|schema cache.*estimated_carbs_g/i.test(r.error.message||'')){delete p.estimated_carbs_g;delete p.protein_g;r=await supabaseClient.from(table).insert({...p,user_id:user.id}).select().single()}if(r.error)throw r.error;return r.data}
-$('foodForm').addEventListener('submit',async e=>{e.preventDefault();if(!user)return;try{const meal=await save('meals',{meal_time:localIso($('fd').value,$('ft').value),meal_type:$('fm').value,portion_size:$('fp').value,estimated_carbs_g:num($('fcg').value),protein_g:num($('fpg').value),notes:$('fn').value.trim()},'fs');const foods=$('foods').value.trim();const triggers=[...document.querySelectorAll('#foodForm input[type=checkbox]:checked')].map(x=>x.value);if(foods||triggers.length){const {error}=await supabaseClient.from('meal_foods').insert({meal_id:meal.id,user_id:user.id,food_name:foods||'Unspecified',notes:triggers.length?'Triggers: '+triggers.join(', '):null});if(error)throw error)}$('foodForm').reset();reset();setMsg('fs','Meal saved to cloud.','ok');await load()}catch(err){setMsg('fs',err.message,'err')}});
-$('glucoseForm').addEventListener('submit',async e=>{e.preventDefault();try{await save('glucose_readings',{reading_time:localIso($('gd').value,$('gt').value),glucose_mmol_l:Number($('gv').value),timing:$('gtime').value,meter_name:$('gm').value.trim()||null,meal_id:$('gmeal').value||null,context:$('gctx').value,minutes_from_meal:num($('gmin').value),estimated_meal_carbs_g:num($('gcg').value),notes:$('gn').value.trim()||null},'gs');$('glucoseForm').reset();reset();}catch(err){setMsg('gs',err.message,'err')}});
-$('symForm').addEventListener('submit',async e=>{e.preventDefault();try{await save('gut_symptoms',{symptom_time:localIso($('sd').value,$('st').value),symptom_type:$('stype').value,severity:Number($('sev').value||0),duration_minutes:num($('dur').value),meal_id:$('smeal').value||null,notes:$('sn').value.trim()||null},'sts');$('symForm').reset();reset()}catch(err){setMsg('sts',err.message,'err')}});
-$('bowelForm').addEventListener('submit',async e=>{e.preventDefault();try{await save('bowel_movements',{movement_time:localIso($('bd').value,$('bt').value),bristol_type:Number($('br').value),urgency:Number($('bu').value||0),completeness:Number($('bc').value||0),difficulty:Number($('bdi').value||0),straining:$('bst').value==='true',notes:$('bn').value.trim()||null},'bs');$('bowelForm').reset();reset()}catch(err){setMsg('bs',err.message,'err')}});
-function num(v){return v===''||v==null?null:Number(v)}
-for(const [id,form] of [['fclear','foodForm'],['gclear','glucoseForm'],['sclear','symForm'],['bclear','bowelForm']])$(id).onclick=()=>{$(form).reset();reset()};
-document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.pane').forEach(x=>x.classList.add('hidden'));btn.classList.add('active');$(btn.dataset.tab).classList.remove('hidden')});
-$('imp').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;setMsg('migration','Reading V2 backup…');try{const text=await file.text();const data=JSON.parse(text);if(Number(data.version)!==2)throw new Error('This does not look like a V2 Gut Tracker JSON backup (version 2 expected).');const foods=Array.isArray(data.foods)?data.foods:[],syms=Array.isArray(data.symptoms)?data.symptoms:[];let mealCount=0,foodCount=0,symCount=0,bowelCount=0,skipped=0;for(const f of foods){const dt=recordTime(f);if(!dt){skipped++;continue}const marker='[V2 migration]';const meal=await saveSilent('meals',{meal_time:dt,meal_type:pick(f,['mealType','meal_type','meal','type'])||'Other',portion_size:pick(f,['portion','portionSize','portion_size'])||'Normal',estimated_carbs_g:null,protein_g:null,notes:[f.notes,f.portion?`V2 portion: ${f.portion}`:''].filter(Boolean).concat(marker).join(' · ')});const foodName=pick(f,['foods','food','whatDidYouEat','what','description'])||'Unspecified';const triggers=pickArray(f,['triggers','potentialTriggers','potential_triggers']);const {error:fe}=await supabaseClient.from('meal_foods').insert({meal_id:meal.id,user_id:user.id,food_name:String(foodName),notes:[triggers.length?'V2 triggers: '+triggers.join(', '):'',marker].filter(Boolean).join(' · ')});if(fe)throw fe;mealCount++;foodCount++}
-for(const s of syms){const dt=recordTime(s);if(!dt){skipped++;continue}const mealId=null;for(const [field,type] of [['bloating','bloating'],['pain','abdominal_pain'],['abdominalPain','abdominal_pain'],['gas','gas'],['urgency','urgency']]){if(s[field]!==undefined&&s[field]!==null&&s[field]!==''){const {error}=await supabaseClient.from('gut_symptoms').insert({user_id:user.id,symptom_time:dt,symptom_type:type,severity:Number(s[field])||0,duration_minutes:null,meal_id:mealId,notes:'[V2 migration]'});if(error)throw error;symCount++}}const br=pick(s,['bristol','bristolType','bristol_type','stoolType']);if(br!==undefined&&br!==null&&br!==''){const {error}=await supabaseClient.from('bowel_movements').insert({user_id:user.id,movement_time:dt,bristol_type:Number(br),urgency:Number(s.urgency)||0,completeness:null,difficulty:null,straining:false,notes:'[V2 migration]'});if(error)throw error;bowelCount++}}
-setMsg('migration',`V2 import complete: ${mealCount} meals, ${foodCount} food records, ${symCount} symptom records, ${bowelCount} bowel records${skipped?' · '+skipped+' records skipped because they had no usable date/time.':''}`,'ok');await load()}catch(err){setMsg('migration','Import failed: '+err.message,'err')}finally{e.target.value=''}});
-function pick(obj,keys){for(const k of keys){if(obj&&obj[k]!==undefined&&obj[k]!==null&&obj[k]!=='')return obj[k]}return null}
-function pickArray(obj,keys){const v=pick(obj,keys);if(Array.isArray(v))return v;if(typeof v==='string')return v.split(/[,;]+/).map(x=>x.trim()).filter(Boolean);return []}
-function recordTime(o){const direct=pick(o,['timestamp','datetime','dateTime','createdAt','created_at']);if(direct){const d=new Date(direct);if(!Number.isNaN(d.getTime()))return d.toISOString()}const d=pick(o,['date','day']);const t=pick(o,['time']);if(d){const dt=new Date(`${d}T${t||'00:00'}`);if(!Number.isNaN(dt.getTime()))return dt.toISOString()}return null}
-$('export').onclick=()=>{const out={version:3,exportedAt:new Date().toISOString(),meals,meal_foods:mealFoods,glucose_readings:glucose,gut_symptoms:symptoms,bowel_movements:bowels};const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gut-tracker-v3-backup.json';a.click();URL.revokeObjectURL(a.href)};
-$('signout').onclick=async()=>{await supabaseClient.auth.signOut();location.reload()};
-$('github').onclick=async()=>{if(!setupClient()){setMsg('authmsg','Supabase publishable key is not configured. Open setup.html first.','err');return}setMsg('authmsg','Opening GitHub sign-in…');const redirectTo=window.location.origin+window.location.pathname;try{const {error}=await supabaseClient.auth.signInWithOAuth({provider:'github',options:{redirectTo}});if(error)setMsg('authmsg','GitHub sign-in failed: '+error.message,'err')}catch(err){setMsg('authmsg','GitHub sign-in failed: '+(err?.message||err),'err')}};
-$('login').onclick=async()=>{if(!setupClient()){setMsg('authmsg','Supabase publishable key is not configured. Open setup.html first.','err');return}const {data,error}=await supabaseClient.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){setMsg('authmsg',error.message,'err');return}user=data.user;showApp();try{await load()}catch(e){setMsg('authmsg',e.message,'err')}};
-$('signup').onclick=async()=>{if(!setupClient()){setMsg('authmsg','Supabase publishable key is not configured. Open setup.html first.','err');return}const {data,error}=await supabaseClient.auth.signUp({email:$('email').value.trim(),password:$('password').value});if(error){setMsg('authmsg',error.message,'err');return}setMsg('authmsg',data.session?'Account created and signed in.':'Account created. Check your email to confirm it, then sign in.','ok')};
-window.addEventListener('load',async()=>{reset();if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service worker registration failed:',err))}if(!setupClient()){setMsg('authmsg','Supabase publishable key is not configured. Open setup.html to configure it.','err');return}const {data,error}=await supabaseClient.auth.getSession();if(error){setMsg('authmsg',error.message,'err');return}if(data.session){user=data.session.user;showApp();try{await load()}catch(e){setMsg('authmsg',e.message,'err')}}});
-</script>
-</body></html>
+            <section id="bowel" class="pane hidden">
+                <form id="bowelForm" class="card">
+                    <h2>🚽 Bowel movement</h2>
+                    <div class="grid">
+                        <div><label>Date</label><input id="bd" type="date" required></div>
+                        <div><label>Time</label><input id="bt" type="time" required></div>
+                        <div><label>Bristol type</label><select id="br">
+                                <option value="1">1 – Hard pellets</option>
+                                <option value="2">2 – Lumpy/firm</option>
+                                <option value="3">3 – Cracked sausage</option>
+                                <option value="4" selected>4 – Smooth sausage</option>
+                                <option value="5">5 – Soft pieces</option>
+                                <option value="6">6 – Mushy</option>
+                                <option value="7">7 – Watery</option>
+                            </select></div>
+                        <div><label>Urgency (0–10)</label><input id="bu" type="number" min="0" max="10" value="0"></div>
+                        <div><label>Completeness (0–10)</label><input id="bc" type="number" min="0" max="10" value="10">
+                        </div>
+                        <div><label>Difficulty (0–10)</label><input id="bdi" type="number" min="0" max="10" value="0">
+                        </div>
+                        <div><label>Straining</label><select id="bst">
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select></div>
+                        <div class="full"><label>Notes</label><textarea id="bn"></textarea></div>
+                    </div>
+                    <div class="row" style="margin-top:14px"><button class="primary">Save bowel movement</button><button
+                            type="button" id="bclear">Clear</button></div>
+                    <p id="bs" class="muted"></p>
+                </form>
+                <div class="card">
+                    <h2>Recent bowel movements</h2>
+                    <div id="blist"></div>
+                </div>
+            </section>
+
+            <section id="timeline" class="pane hidden">
+                <div class="card">
+                    <h2>🕒 Timeline</h2>
+                    <p class="muted">Cloud records in chronological order. Relationships are associations, not proof of
+                        causation.</p>
+                    <div id="timelineList"></div>
+                </div>
+            </section>
+            <section id="insights" class="pane hidden">
+                <div class="card">
+                    <h2>📊 Overview</h2>
+                    <div class="metrics">
+                        <div class="metricbox">
+                            <div class="muted">Meals</div>
+                            <div id="mc" class="metric">0</div>
+                        </div>
+                        <div class="metricbox">
+                            <div class="muted">Glucose</div>
+                            <div id="gc" class="metric">0</div>
+                        </div>
+                        <div class="metricbox">
+                            <div class="muted">Symptoms</div>
+                            <div id="xc" class="metric">0</div>
+                        </div>
+                        <div class="metricbox">
+                            <div class="muted">Bowel</div>
+                            <div id="bcnt" class="metric">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>Glucose snapshot</h2>
+                    <div id="gsummary" class="muted">Add spot readings to see your recent pattern.</div>
+                </div>
+                <div class="card">
+                    <h2>Trigger associations</h2>
+                    <p class="muted">Counts symptoms occurring within 24 hours after meals tagged with each trigger.
+                        This is pattern-finding, not diagnosis.</p>
+                    <div id="analysis"></div>
+                </div>
+            </section>
+            <section id="data" class="pane hidden">
+                <div class="card">
+                    <h2>☁️ Cloud data & migration</h2>
+                    <p class="muted">Supabase is the primary store. Import your existing V2 JSON backup here. Importing
+                        never deletes existing cloud data.</p>
+                    <div class="row"><label class="filebtn">Import V2 JSON<input id="imp" type="file"
+                                accept="application/json,.json" hidden></label><button id="export">Export current cloud
+                            JSON</button><button id="signout" class="danger">Sign out</button></div>
+                    <p id="migration" class="muted hint"></p>
+                </div>
+                <div class="card">
+                    <h2>Connection</h2>
+                    <p id="userInfo" class="muted"></p>
+                    <p class="muted">Supabase URL is built into this app. Your publishable key stays in this browser
+                        only.</p>
+                </div>
+            </section>
+            <footer class="version">Gut + Glucose Tracker · Version <span data-app-version></span></footer>
+        </div>
+    </main>
+    <script>
+        const VERSION = APP_VERSION, SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co'; let supabaseClient = null, user = null, meals = [], glucose = [], symptoms = [], bowels = [], mealFoods = []; const $ = id => document.getElementById(id); document.title += ` V${VERSION}`; document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${VERSION}` });
+        function setupClient() { if (supabaseClient) return true; const key = localStorage.getItem('gut_tracker_publishable_key') || ''; if (!key) return false; supabaseClient = window.supabase.createClient(SUPABASE_URL, key); return true }
+        function setMsg(id, text, cls = '') { const e = $(id); if (!e) return; e.textContent = text; e.className = 'muted ' + cls }
+        function esc(v) { return String(v ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])) }
+        function localIso(date, time) { return new Date(`${date}T${time || '00:00'}`).toISOString() }
+        function reset() { const now = new Date(), d = now.toISOString().slice(0, 10), t = now.toTimeString().slice(0, 5); for (const [a, b] of [['fd', 'ft'], ['gd', 'gt'], ['sd', 'st'], ['bd', 'bt']]) { $(a).value = d; $(b).value = t } }
+        function showApp() { $('auth').classList.add('hidden'); $('app').classList.remove('hidden'); $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || '' }
+        function fmt(v) { return v ? new Date(v).toLocaleString('en-GB') : '—' }
+        function mealOptions() { const opts = meals.slice(0, 100).map(m => `<option value="${m.id}">${esc(fmt(m.meal_time))} · ${esc(m.meal_type || 'Meal')}</option>`).join(''); $('gmeal').innerHTML = '<option value="">None / unrelated</option>' + opts; $('smeal').innerHTML = '<option value="">None</option>' + opts }
+        async function load() { const [m, g, s, b, mf] = await Promise.all([supabaseClient.from('meals').select('*').order('meal_time', { ascending: false }), supabaseClient.from('glucose_readings').select('*').order('reading_time', { ascending: false }), supabaseClient.from('gut_symptoms').select('*').order('symptom_time', { ascending: false }), supabaseClient.from('bowel_movements').select('*').order('movement_time', { ascending: false }), supabaseClient.from('meal_foods').select('*')]); for (const r of [m, g, s, b, mf]) if (r.error) throw r.error; meals = m.data || []; glucose = g.data || []; symptoms = s.data || []; bowels = b.data || []; mealFoods = mf.data || []; render() }
+        function render() {
+            $('mc').textContent = meals.length; $('gc').textContent = glucose.length; $('xc').textContent = symptoms.length; $('bcnt').textContent = bowels.length; $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || ''; mealOptions();
+            $('flist').innerHTML = meals.slice(0, 10).map(x => { const foods = mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', '); return `<div class="entry"><strong>${esc(fmt(x.meal_time))}</strong> · ${esc(x.meal_type || '')}</div><div>${esc(foods || x.notes || '')}</div>` }).join('') || '<p class="muted">No meals yet.</p>';
+            $('glist').innerHTML = glucose.slice(0, 10).map(x => `<div class="entry"><strong>${esc(fmt(x.reading_time))}</strong> · ${esc(x.glucose_mmol_l)} mmol/L · ${esc(x.timing || '')}</div>`).join('') || '<p class="muted">No readings yet.</p>';
+            $('slist').innerHTML = symptoms.slice(0, 10).map(x => `<div class="entry"><strong>${esc(fmt(x.symptom_time))}</strong> · ${esc(x.symptom_type || '')} · ${esc(x.severity ?? 0)}/10</div>`).join('') || '<p class="muted">No symptoms yet.</p>';
+            $('blist').innerHTML = bowels.slice(0, 10).map(x => `<div class="entry"><strong>${esc(fmt(x.movement_time))}</strong> · Bristol ${esc(x.bristol_type)}</div>`).join('') || '<p class="muted">No bowel movements yet.</p>';
+            const vals = glucose.map(x => Number(x.glucose_mmol_l)).filter(Number.isFinite); $('gsummary').textContent = vals.length ? `Average recorded glucose: ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)} mmol/L · Latest: ${vals[0].toFixed(1)} mmol/L` : 'Add spot readings to see your recent pattern.';
+            const events = [...meals.map(x => ({ t: x.meal_time, label: '🍽️ ' + (x.meal_type || 'Meal'), detail: mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })), ...glucose.map(x => ({ t: x.reading_time, label: '🩸 ' + x.glucose_mmol_l + ' mmol/L', detail: x.timing || '' })), ...symptoms.map(x => ({ t: x.symptom_time, label: '🫃 ' + (x.symptom_type || 'Symptom'), detail: (x.severity ?? 0) + '/10' })), ...bowels.map(x => ({ t: x.movement_time, label: '🚽 Bristol ' + x.bristol_type, detail: '' }))].sort((a, b) => new Date(b.t) - new Date(a.t)); $('timelineList').innerHTML = events.slice(0, 40).map(e => `<div class="entry"><strong>${esc(fmt(e.t))}</strong> · ${esc(e.label)}${e.detail ? ' · ' + esc(e.detail) : ''}</div>`).join('') || '<p class="muted">No records yet.</p>';
+        }
+        async function save(table, payload, msgId) { const { data, error } = await supabaseClient.from(table).insert({ ...payload, user_id: user.id }).select().single(); if (error) throw error; setMsg(msgId, 'Saved to cloud.', 'ok'); await load(); return data }
+        async function saveSilent(table, payload) { let p = { ...payload }; let r = await supabaseClient.from(table).insert({ ...p, user_id: user.id }).select().single(); if (r.error && table === 'meals' && /estimated_carbs_g|protein_g.*schema cache|schema cache.*estimated_carbs_g/i.test(r.error.message || '')) { delete p.estimated_carbs_g; delete p.protein_g; r = await supabaseClient.from(table).insert({ ...p, user_id: user.id }).select().single() } if (r.error) throw r.error; return r.data }
+        $('foodForm').addEventListener('submit', async e => { e.preventDefault(); if (!user) return; try { const meal = await save('meals', { meal_time: localIso($('fd').value, $('ft').value), meal_type: $('fm').value, portion_size: $('fp').value, estimated_carbs_g: num($('fcg').value), protein_g: num($('fpg').value), notes: $('fn').value.trim() }, 'fs'); const foods = $('foods').value.trim(); const triggers = [...document.querySelectorAll('#foodForm input[type=checkbox]:checked')].map(x => x.value); if (foods || triggers.length) { const { error } = await supabaseClient.from('meal_foods').insert({ meal_id: meal.id, user_id: user.id, food_name: foods || 'Unspecified', notes: triggers.length ? 'Triggers: ' + triggers.join(', ') : null }); if (error) throw error } $('foodForm').reset(); reset(); setMsg('fs', 'Meal saved to cloud.', 'ok'); await load() } catch (err) { setMsg('fs', err.message, 'err') } });
+        $('glucoseForm').addEventListener('submit', async e => { e.preventDefault(); try { await save('glucose_readings', { reading_time: localIso($('gd').value, $('gt').value), glucose_mmol_l: Number($('gv').value), timing: $('gtime').value, meter_name: $('gm').value.trim() || null, meal_id: $('gmeal').value || null, context: $('gctx').value, minutes_from_meal: num($('gmin').value), estimated_meal_carbs_g: num($('gcg').value), notes: $('gn').value.trim() || null }, 'gs'); $('glucoseForm').reset(); reset(); } catch (err) { setMsg('gs', err.message, 'err') } });
+        $('symForm').addEventListener('submit', async e => { e.preventDefault(); try { await save('gut_symptoms', { symptom_time: localIso($('sd').value, $('st').value), symptom_type: $('stype').value, severity: Number($('sev').value || 0), duration_minutes: num($('dur').value), meal_id: $('smeal').value || null, notes: $('sn').value.trim() || null }, 'sts'); $('symForm').reset(); reset() } catch (err) { setMsg('sts', err.message, 'err') } });
+        $('bowelForm').addEventListener('submit', async e => { e.preventDefault(); try { await save('bowel_movements', { movement_time: localIso($('bd').value, $('bt').value), bristol_type: Number($('br').value), urgency: Number($('bu').value || 0), completeness: Number($('bc').value || 0), difficulty: Number($('bdi').value || 0), straining: $('bst').value === 'true', notes: $('bn').value.trim() || null }, 'bs'); $('bowelForm').reset(); reset() } catch (err) { setMsg('bs', err.message, 'err') } });
+        function num(v) { return v === '' || v == null ? null : Number(v) }
+        for (const [id, form] of [['fclear', 'foodForm'], ['gclear', 'glucoseForm'], ['sclear', 'symForm'], ['bclear', 'bowelForm']]) $(id).onclick = () => { $(form).reset(); reset() };
+        document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('active')); document.querySelectorAll('.pane').forEach(x => x.classList.add('hidden')); btn.classList.add('active'); $(btn.dataset.tab).classList.remove('hidden') });
+        $('imp').addEventListener('change', async e => {
+            const file = e.target.files?.[0]; if (!file) return; setMsg('migration', 'Reading V2 backup…'); try {
+                const text = await file.text(); const data = JSON.parse(text); if (Number(data.version) !== 2) throw new Error('This does not look like a V2 Gut Tracker JSON backup (version 2 expected).'); const foods = Array.isArray(data.foods) ? data.foods : [], syms = Array.isArray(data.symptoms) ? data.symptoms : []; let mealCount = 0, foodCount = 0, symCount = 0, bowelCount = 0, skipped = 0; for (const f of foods) { const dt = recordTime(f); if (!dt) { skipped++; continue } const marker = '[V2 migration]'; const meal = await saveSilent('meals', { meal_time: dt, meal_type: pick(f, ['mealType', 'meal_type', 'meal', 'type']) || 'Other', portion_size: pick(f, ['portion', 'portionSize', 'portion_size']) || 'Normal', estimated_carbs_g: null, protein_g: null, notes: [f.notes, f.portion ? `V2 portion: ${f.portion}` : ''].filter(Boolean).concat(marker).join(' · ') }); const foodName = pick(f, ['foods', 'food', 'whatDidYouEat', 'what', 'description']) || 'Unspecified'; const triggers = pickArray(f, ['triggers', 'potentialTriggers', 'potential_triggers']); const { error: fe } = await supabaseClient.from('meal_foods').insert({ meal_id: meal.id, user_id: user.id, food_name: String(foodName), notes: [triggers.length ? 'V2 triggers: ' + triggers.join(', ') : '', marker].filter(Boolean).join(' · ') }); if (fe) throw fe; mealCount++; foodCount++ }
+                for (const s of syms) { const dt = recordTime(s); if (!dt) { skipped++; continue } const mealId = null; for (const [field, type] of [['bloating', 'bloating'], ['pain', 'abdominal_pain'], ['abdominalPain', 'abdominal_pain'], ['gas', 'gas'], ['urgency', 'urgency']]) { if (s[field] !== undefined && s[field] !== null && s[field] !== '') { const { error } = await supabaseClient.from('gut_symptoms').insert({ user_id: user.id, symptom_time: dt, symptom_type: type, severity: Number(s[field]) || 0, duration_minutes: null, meal_id: mealId, notes: '[V2 migration]' }); if (error) throw error; symCount++ } } const br = pick(s, ['bristol', 'bristolType', 'bristol_type', 'stoolType']); if (br !== undefined && br !== null && br !== '') { const { error } = await supabaseClient.from('bowel_movements').insert({ user_id: user.id, movement_time: dt, bristol_type: Number(br), urgency: Number(s.urgency) || 0, completeness: null, difficulty: null, straining: false, notes: '[V2 migration]' }); if (error) throw error; bowelCount++ } }
+                setMsg('migration', `V2 import complete: ${mealCount} meals, ${foodCount} food records, ${symCount} symptom records, ${bowelCount} bowel records${skipped ? ' · ' + skipped + ' records skipped because they had no usable date/time.' : ''}`, 'ok'); await load()
+            } catch (err) { setMsg('migration', 'Import failed: ' + err.message, 'err') } finally { e.target.value = '' }
+        });
+        function pick(obj, keys) { for (const k of keys) { if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k] } return null }
+        function pickArray(obj, keys) { const v = pick(obj, keys); if (Array.isArray(v)) return v; if (typeof v === 'string') return v.split(/[,;]+/).map(x => x.trim()).filter(Boolean); return [] }
+        function recordTime(o) { const direct = pick(o, ['timestamp', 'datetime', 'dateTime', 'createdAt', 'created_at']); if (direct) { const d = new Date(direct); if (!Number.isNaN(d.getTime())) return d.toISOString() } const d = pick(o, ['date', 'day']); const t = pick(o, ['time']); if (d) { const dt = new Date(`${d}T${t || '00:00'}`); if (!Number.isNaN(dt.getTime())) return dt.toISOString() } return null }
+        $('export').onclick = () => { const out = { version: 3, exportedAt: new Date().toISOString(), meals, meal_foods: mealFoods, glucose_readings: glucose, gut_symptoms: symptoms, bowel_movements: bowels }; const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gut-tracker-v3-backup.json'; a.click(); URL.revokeObjectURL(a.href) };
+        $('signout').onclick = async () => { await supabaseClient.auth.signOut(); location.reload() };
+        $('github').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is not configured. Open setup.html first.', 'err'); return } setMsg('authmsg', 'Opening GitHub sign-in…'); const redirectTo = window.location.origin + window.location.pathname; try { const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'github', options: { redirectTo } }); if (error) setMsg('authmsg', 'GitHub sign-in failed: ' + error.message, 'err') } catch (err) { setMsg('authmsg', 'GitHub sign-in failed: ' + (err?.message || err), 'err') } };
+        $('login').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is not configured. Open setup.html first.', 'err'); return } const { data, error } = await supabaseClient.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value }); if (error) { setMsg('authmsg', error.message, 'err'); return } user = data.user; showApp(); try { await load() } catch (e) { setMsg('authmsg', e.message, 'err') } };
+        $('signup').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is not configured. Open setup.html first.', 'err'); return } const { data, error } = await supabaseClient.auth.signUp({ email: $('email').value.trim(), password: $('password').value }); if (error) { setMsg('authmsg', error.message, 'err'); return } setMsg('authmsg', data.session ? 'Account created and signed in.' : 'Account created. Check your email to confirm it, then sign in.', 'ok') };
+        window.addEventListener('load', async () => { reset(); if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Service worker registration failed:', err)) } if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is not configured. Open setup.html to configure it.', 'err'); return } const { data, error } = await supabaseClient.auth.getSession(); if (error) { setMsg('authmsg', error.message, 'err'); return } if (data.session) { user = data.session.user; showApp(); try { await load() } catch (e) { setMsg('authmsg', e.message, 'err') } } });
+    </script>
+</body>
+
+</html>
