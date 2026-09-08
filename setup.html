@@ -84,18 +84,23 @@
         document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${APP_VERSION}` });
         const SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co';
         const key = document.getElementById('key');
-        key.value = localStorage.getItem('gut_tracker_publishable_key') || '';
+        key.value = getStoredSupabaseKey();
         const msg = document.getElementById('msg');
+        if (key.value && !isLikelySupabasePublishableKey(key.value)) {
+            key.value = '';
+            clearStoredSupabaseKey();
+            msg.textContent = 'The saved Supabase key was invalid and has been cleared. Enter the publishable key from Supabase Project Settings → API.';
+        }
         document.getElementById('save').onclick = () => {
             const value = key.value.trim();
-            if (!value) { msg.textContent = 'Enter the publishable key first.'; return }
-            localStorage.setItem('gut_tracker_publishable_key', value);
+            if (!isLikelySupabasePublishableKey(value)) { msg.textContent = 'Enter a valid Supabase publishable key from Project Settings → API.'; return }
+            storeSupabaseKey(value);
             location.href = './index.html';
         };
         document.getElementById('github').onclick = async () => {
-            const value = key.value.trim() || localStorage.getItem('gut_tracker_publishable_key') || '';
-            if (!value) { msg.textContent = 'Enter the publishable key first.'; return }
-            localStorage.setItem('gut_tracker_publishable_key', value);
+            const value = key.value.trim() || getStoredSupabaseKey();
+            if (!isLikelySupabasePublishableKey(value)) { msg.textContent = 'Enter a valid Supabase publishable key from Project Settings → API.'; return }
+            storeSupabaseKey(value);
             const client = window.supabase.createClient(SUPABASE_URL, value);
             const redirectTo = new URL('./index.html', window.location.href).href;
             const { error } = await client.auth.signInWithOAuth({ provider: 'github', options: { redirectTo } });
