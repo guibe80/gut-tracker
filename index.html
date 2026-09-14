@@ -258,7 +258,15 @@
             font-size: 12px;
             padding: 4px 8px;
             border-radius: 999px;
-            background: #eef3f0
+            background: #eef3f0;
+            cursor: pointer;
+            border: 1px solid var(--b)
+        }
+        .sync:hover {
+            opacity: 0.85
+        }
+        .sync:active {
+            opacity: 0.7
         }
 
         .sync.connected {
@@ -350,7 +358,7 @@
                     <div>
                         <h1>Gut + Glucose</h1>
                         <p class="sub">V3 · Supabase-backed spot glucose + gut diary</p>
-                    </div><span id="sync" class="sync syncing">🟠 syncing</span>
+                    </div><button id="sync" class="sync syncing" type="button" aria-label="Reconnect to Supabase">🟠 syncing</button>
                 </div>
             </header>
             <nav><button class="tab active" data-tab="food">🍽️ Food</button><button class="tab" data-tab="glucose">🩸
@@ -638,6 +646,7 @@
         function setSync(state, detail = '') { const labels = { connected: '🟢 connected', syncing: '🟠 syncing', error: '🔴 cloud error' }; const element = $('sync'); if (!element) return; element.textContent = labels[state]; element.title = detail || labels[state]; element.className = 'sync ' + state }
         function updateSetupLink() { const link = $('setupLink'); if (link) link.classList.remove('hidden') }
         function setupClient() { if (supabaseClient) return true; const key = getStoredSupabaseKey(); if (!isLikelySupabasePublishableKey(key)) return false; supabaseClient = window.supabase.createClient(SUPABASE_URL, key); return true }
+        async function reconnectAndReload() { if (!supabaseClient) { if (!setupClient()) { setSync('error'); setMsg('authmsg', 'Supabase publishable key is missing or invalid. Open setup.html first.', 'err'); return } setSync('syncing') } setSync('syncing'); try { if (user) { const { data, error } = await supabaseClient.auth.getSession(); if (error) { setSync('error'); setMsg('authmsg', 'Session refresh failed: ' + error.message, 'err'); return } if (data.session) { user = data.session.user; showApp() } else { setSync('error'); setMsg('authmsg', 'Session expired. Sign in again.', 'err'); return } } else { setMsg('authmsg', 'Not signed in. Use Sign in or Create account first.', 'err'); setSync('error'); return } await load(); setSync('connected') } catch (error) { setSync('error'); setMsg('authmsg', 'Reconnect failed: ' + error.message, 'err') } }
         function setMsg(id, text, cls = '') { const e = $(id); if (!e) return; e.textContent = text; e.className = 'muted ' + cls }
         function esc(v) { return String(v ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])) }
         function localIso(date, time) { return new Date(`${date}T${time || '00:00'}`).toISOString() }
@@ -705,6 +714,7 @@
         function recordTime(o) { const direct = pick(o, ['timestamp', 'datetime', 'dateTime', 'createdAt', 'created_at']); if (direct) { const d = new Date(direct); if (!Number.isNaN(d.getTime())) return d.toISOString() } const d = pick(o, ['date', 'day']); const t = pick(o, ['time']); if (d) { const dt = new Date(`${d}T${t || '00:00'}`); if (!Number.isNaN(dt.getTime())) return dt.toISOString() } return null }
         $('export').onclick = () => { const out = { version: 3, exportedAt: new Date().toISOString(), meals, meal_foods: mealFoods, glucose_readings: glucose, gut_symptoms: symptoms, bowel_movements: bowels, weight_entries: weights }; const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gut-tracker-v3-backup.json'; a.click(); URL.revokeObjectURL(a.href) };
         $('signout').onclick = async () => { await supabaseClient.auth.signOut(); location.reload() };
+        $('sync').onclick = reconnectAndReload;
         $('github').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is missing or invalid. Open setup.html and enter the key from Supabase Project Settings → API.', 'err'); return } setMsg('authmsg', 'Opening GitHub sign-in…'); const redirectTo = window.location.origin + window.location.pathname; try { const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'github', options: { redirectTo } }); if (error) setMsg('authmsg', 'GitHub sign-in failed: ' + error.message, 'err') } catch (err) { setMsg('authmsg', 'GitHub sign-in failed: ' + (err?.message || err), 'err') } };
         $('login').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is not configured. Open setup.html first.', 'err'); return } setSync('syncing'); const { data, error } = await supabaseClient.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value }); if (error) { setSync('error'); setMsg('authmsg', error.message, 'err'); return } setSync('connected'); user = data.user; showApp(); try { await load() } catch (e) { setMsg('authmsg', e.message, 'err') } };
         $('signup').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is not configured. Open setup.html first.', 'err'); return } setSync('syncing'); const { data, error } = await supabaseClient.auth.signUp({ email: $('email').value.trim(), password: $('password').value }); if (error) { setSync('error'); setMsg('authmsg', error.message, 'err'); return } setSync('connected'); setMsg('authmsg', data.session ? 'Account created and signed in.' : 'Account created. Check your email to confirm it, then sign in.', 'ok') };
