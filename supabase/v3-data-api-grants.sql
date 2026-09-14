@@ -11,6 +11,7 @@ grant select, insert, update, delete on public.meal_foods to authenticated;
 grant select, insert, update, delete on public.glucose_readings to authenticated;
 grant select, insert, update, delete on public.gut_symptoms to authenticated;
 grant select, insert, update, delete on public.bowel_movements to authenticated;
+grant select, insert, update, delete on public.weight_entries to authenticated;
 grant select, insert, update, delete on public.daily_context to authenticated;
 
 -- Sequence privileges are not required for UUID primary keys.
