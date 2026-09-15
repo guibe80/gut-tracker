@@ -885,23 +885,63 @@
         async function loadGlucose() { try { return await loadPage('glucose_readings', 'measured_at', 'glucose') } catch (error) { if (/glucose_readings.*(measured_at|reading_time|does not exist|schema cache)|relation .*glucose_readings.*does not exist/i.test(error.message || '')) { totals.glucose = 0; return [] } throw error } }
         async function loadWeights() { try { return await loadPage('weight_entries', 'measured_at', 'weights') } catch (error) { if (/weight_entries.*(measured_at|does not exist|schema cache)|relation .*weight_entries.*does not exist/i.test(error.message || '')) { totals.weights = 0; return [] } throw error } }
         async function load() { setSync('syncing'); try { const [m, g, s, b, w] = await Promise.all([loadPage('meals', 'meal_time', 'meals'), loadGlucose(), loadPage('gut_symptoms', 'occurred_at', 'symptoms'), loadPage('bowel_movements', 'occurred_at', 'bowels'), loadWeights()]); for (const name of Object.keys(pageSize)) page[name] = Math.min(page[name], Math.max(0, Math.ceil(totals[name] / pageSize[name]) - 1)); const mealIds = m.map(meal => meal.id); const mf = mealIds.length ? await supabaseClient.from('meal_foods').select('*').in('meal_id', mealIds) : { data: [], error: null }; if (mf.error) throw mf.error; meals = m; glucose = g; symptoms = s; bowels = b; weights = w; mealFoods = mf.data || []; render(); setSync('connected') } catch (error) { setSync('error'); throw error } }
-        let dvState = { date: new Date().toISOString().slice(0, 10), toggles: { food: true, glucose: true, gut: true, bowel: true, weight: true } };
+        let dvState = { date: new Date().toISOString().slice(0, 10), toggles: { food: true, glucose: true, gut: true, bowel: true, weight: true }, data: null, loading: false };
 
         const DV_LANE_ORDER = ['food', 'glucose', 'gut', 'bowel', 'weight'];
         const DV_LANE_LABEL = { food: 'Food', glucose: 'Glucose', gut: 'Gut', bowel: 'Bowel', weight: 'Weight' };
         const DV_LANE_ICON = { food: '🍽️', glucose: '🩸', gut: '🫃', bowel: '🚽', weight: '⚖️' };
-        const DV_GET_EVENTS = {
-            food: () => meals.map(x => ({ type: 'food', t: x.meal_time, detail: mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })),
-            glucose: () => glucose.map(x => ({ type: 'glucose', t: x.measured_at, detail: x.glucose_mmol_l + ' mmol/L' })),
-            gut: () => symptoms.map(x => ({ type: 'gut', t: x.occurred_at, detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10' })),
-            bowel: () => bowels.map(x => ({ type: 'bowel', t: x.occurred_at, detail: 'Bristol ' + x.bristol_type })),
-            weight: () => weights.map(x => ({ type: 'weight', t: x.measured_at, detail: Number(x.weight_kg).toFixed(2) + ' kg' }))
-        };
 
-        function dvDayStart(isoDate) { return new Date(isoDate + 'T00:00:00'); }
-        function dvDayEnd(isoDate) { return new Date(isoDate + 'T23:59:59'); }
+        function dvParseDate(isoDate) { const [y, m, d] = isoDate.split('-').map(Number); return new Date(y, m - 1, d); }
+        function dvFormatDate(date) { return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0'); }
+        function dvDayStart(isoDate) { return dvParseDate(isoDate); }
+        function dvDayEnd(isoDate) { const d = new Date(dvParseDate(isoDate).getTime() + 86399999); return d; }
         function dvPercentThrough(dayStart, eventTime) { const span = 86400000; return Math.max(0, Math.min(1, (new Date(eventTime).getTime() - dayStart.getTime()) / span)); }
         function dvFormatHour(pct) { const totalMinutes = Math.round(pct * 1440); const h = Math.floor(totalMinutes / 60), m = totalMinutes % 60; return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); }
+
+        async function dvFetch(isoDate) {
+            if (dvState.data && dvState.date === isoDate) return dvState.data;
+            const start = isoDate + 'T00:00:00';
+            const end = isoDate + 'T23:59:59';
+            if (!supabaseClient || !user) return null;
+            try {
+                const [mResult, gResult, sResult, bResult, wResult] = await Promise.all([
+                    supabaseClient.from('meals').select('*').gte('meal_time', start).lte('meal_time', end).order('meal_time'),
+                    supabaseClient.from('glucose_readings').select('*').gte('measured_at', start).lte('measured_at', end).order('measured_at'),
+                    supabaseClient.from('gut_symptoms').select('*').gte('occurred_at', start).lte('occurred_at', end).order('occurred_at'),
+                    supabaseClient.from('bowel_movements').select('*').gte('occurred_at', start).lte('occurred_at', end).order('occurred_at'),
+                    supabaseClient.from('weight_entries').select('*').gte('measured_at', start).lte('measured_at', end).order('measured_at')
+                ]);
+                if (mResult.error) throw mResult.error;
+                if (gResult.error) throw gResult.error;
+                if (sResult.error) throw sResult.error;
+                if (bResult.error) throw bResult.error;
+                if (wResult.error) throw wResult.error;
+                const mealIds = (mResult.data || []).map(x => x.id);
+                let mfResult = { data: [] };
+                if (mealIds.length) { mfResult = await supabaseClient.from('meal_foods').select('*').in('meal_id', mealIds); if (mfResult.error) throw mfResult.error; }
+                dvState.data = { meals: mResult.data || [], glucose: gResult.data || [], symptoms: sResult.data || [], bowels: bResult.data || [], weights: wResult.data || [], mealFoods: mfResult.data || [] };
+                dvState.date = isoDate;
+                return dvState.data;
+            } catch (err) {
+                console.warn('Day view fetch failed for', isoDate, err);
+                return null;
+            }
+        }
+
+        function dvGetEvents(data, type) {
+            if (!data) return [];
+            const dayStart = dvDayStart(dvState.date).getTime();
+            const dayEnd = dvDayEnd(dvState.date).getTime();
+            const filter = e => { const t = new Date(e.t).getTime(); return t >= dayStart && t <= dayEnd; };
+            switch (type) {
+                case 'food': return data.meals.map(x => ({ type: 'food', t: x.meal_time, detail: data.mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'glucose': return data.glucose.map(x => ({ type: 'glucose', t: x.measured_at, detail: x.glucose_mmol_l + ' mmol/L' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'gut': return data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'bowel': return data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, detail: 'Bristol ' + x.bristol_type })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'weight': return data.weights.map(x => ({ type: 'weight', t: x.measured_at, detail: Number(x.weight_kg).toFixed(2) + ' kg' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                default: return [];
+            }
+        }
 
         function dvBuild() {
             const elTimeline = $('dvTimeline');
@@ -919,28 +959,25 @@
             elTimeAxis.innerHTML = ['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00','24:00'].map(label => `<span>${label}</span>`).join('');
 
             const visibleTypes = DV_LANE_ORDER.filter(type => dvState.toggles[type]);
+            const data = dvState.data;
             let html = '';
             let eventCount = 0;
 
             for (const type of visibleTypes) {
-                const events = DV_GET_EVENTS[type]().filter(e => { const t = new Date(e.t).getTime(); return t >= dayStart.getTime() && t <= dvDayEnd(dvState.date).getTime(); }).sort((a, b) => new Date(a.t) - new Date(b.t));
+                const events = dvGetEvents(data, type);
+                if (events.length === 0) continue;
                 eventCount += events.length;
                 html += `<div class="dv-lane" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px"><span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>`;
-                if (events.length === 0) {
-                    html += `<span class="muted" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:11px;">no entries</span>`;
-                } else {
-                    for (const e of events) {
-                        const pct = dvPercentThrough(dayStart, e.t);
-                        const leftPx = pct * 100;
-                        const timeStr = dvFormatHour(pct);
-                        const detail = e.detail ? ' — ' + esc(e.detail) : '';
-                        html += `<div class="dv-event" data-dv-type="${type}" data-dv-time="${esc(timeStr)}" data-dv-detail="${esc(e.detail || '')}" style="left:${leftPx}%" title="${esc(timeStr)}${detail}">${DV_LANE_ICON[type]}<div class="dv-event-popup">${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}</div></div>`;
-                    }
+                for (const e of events) {
+                    const pct = dvPercentThrough(dayStart, e.t);
+                    const leftPct = pct * 100;
+                    const timeStr = dvFormatHour(pct);
+                    html += `<div class="dv-event" data-dv-type="${type}" data-dv-time="${esc(timeStr)}" data-dv-detail="${esc(e.detail || '')}" style="left:${leftPct}%" title="${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}">${DV_LANE_ICON[type]}<div class="dv-event-popup">${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}</div></div>`;
                 }
                 html += '</div>';
             }
 
-            if (showNowLine && visibleTypes.length && dvState.toggles[visibleTypes[0]]) {
+            if (showNowLine && visibleTypes.length && dvState.toggles[visibleTypes[0]] && eventCount > 0) {
                 const nowPct = dvPercentThrough(dayStart, now.toISOString());
                 if (nowPct >= 0 && nowPct <= 1) {
                     html += `<div class="dv-now" style="left:${nowPct * 100}%"></div>`;
@@ -954,38 +991,59 @@
             elLanes.innerHTML = html;
         }
 
+        async function dvRender() {
+            const requestedDate = dvState.date;
+            try {
+                const elLanes = $('dvLanes');
+                if (elLanes) elLanes.innerHTML = '<div class="dv-empty">Loading...</div>';
+                const data = await dvFetch(dvState.date);
+                // Discard if a newer navigation moved us off this date
+                if (requestedDate !== dvState.date) return;
+                if (!data) {
+                    const elLanes2 = $('dvLanes');
+                    if (elLanes2) elLanes2.innerHTML = '<div class="dv-empty">Not signed in.</div>';
+                    return;
+                }
+                dvBuild();
+            } catch (err) {
+                console.error('Day view render error:', err);
+                const elLanes3 = $('dvLanes');
+                if (elLanes3) elLanes3.innerHTML = '<div class="dv-empty">Error loading data.</div>';
+            }
+        }
+
         function dvGoTo(dateIso) {
             dvState.date = dateIso;
+            dvState.data = null;
             if ($('dvDate')) $('dvDate').value = dateIso;
-            dvBuild();
+            dvRender();
         }
 
         function dvToggle(type) {
             dvState.toggles[type] = !dvState.toggles[type];
+            dvState.data = null;
             dvBuild();
         }
 
         function dvToday() { dvGoTo(new Date().toISOString().slice(0, 10)); }
 
         function dvPrev() {
-            const d = new Date(dvState.date + 'T00:00:00');
+            const d = new Date(dvParseDate(dvState.date).getTime());
             d.setDate(d.getDate() - 1);
-            dvGoTo(d.toISOString().slice(0, 10));
+            dvGoTo(dvFormatDate(d));
         }
 
         function dvNext() {
-            const d = new Date(dvState.date + 'T00:00:00');
+            const d = new Date(dvParseDate(dvState.date).getTime());
             d.setDate(d.getDate() + 1);
-            dvGoTo(d.toISOString().slice(0, 10));
+            dvGoTo(dvFormatDate(d));
         }
 
-        function dvRender() { dvBuild(); }
-
-        $('dvPrevDay').onclick = dvPrev;
-        $('dvNextDay').onclick = dvNext;
-        $('dvToday').onclick = dvToday;
-        $('dvDate').onchange = () => { const val = $('dvDate').value; if (val) dvGoTo(val); };
-        $('dvToggles').onclick = event => { const btn = event.target.closest('.dv-toggle'); if (!btn) return; dvToggle(btn.dataset.dvType); };
+        $('dvPrevDay').addEventListener('click', dvPrev);
+        $('dvNextDay').addEventListener('click', dvNext);
+        $('dvToday').addEventListener('click', dvToday);
+        $('dvDate').addEventListener('change', () => { const val = $('dvDate').value; if (val) dvGoTo(val); });
+        $('dvToggles').addEventListener('click', event => { const btn = event.target.closest('.dv-toggle'); if (!btn) return; dvToggle(btn.dataset.dvType); });
 
         function render() {
             $('mc').textContent = totals.meals; $('gc').textContent = totals.glucose; $('xc').textContent = totals.symptoms; $('bcnt').textContent = totals.bowels; $('wcnt').textContent = totals.weights; $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || ''; mealOptions();
