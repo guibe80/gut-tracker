@@ -56,7 +56,217 @@
             margin: 14px 0
         }
 
-        button {
+        .dayview {
+            --dv-lane-food: #1f6f5c;
+            --dv-lane-glucose: #b04a1f;
+            --dv-lane-gut: #6b4c9a;
+            --dv-lane-bowel: #9b2c2c;
+            --dv-lane-weight: #1c6f8a;
+        }
+
+        .dayview .dv-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .dayview .dv-date {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dayview .dv-date input[type="date"] {
+            width: auto;
+            min-height: 44px;
+            padding: 8px 10px;
+            font: inherit;
+        }
+
+        .dayview .dv-nav {
+            display: flex;
+            gap: 4px;
+        }
+
+        .dayview .dv-nav button {
+            min-height: 44px;
+            padding: 8px 12px;
+            font-size: 15px;
+        }
+
+        .dayview .dv-toggles {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin: 10px 0 14px;
+        }
+
+        .dayview .dv-toggle {
+            min-height: 36px;
+            padding: 5px 11px;
+            font-size: 13px;
+            border-radius: 999px;
+            border: 1px solid var(--b);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .dayview .dv-toggle.active {
+            color: #fff;
+        }
+
+        .dayview .dv-toggle.active[data-dv-type="food"] { background: var(--dv-lane-food); border-color: var(--dv-lane-food); }
+        .dayview .dv-toggle.active[data-dv-type="glucose"] { background: var(--dv-lane-glucose); border-color: var(--dv-lane-glucose); }
+        .dayview .dv-toggle.active[data-dv-type="gut"] { background: var(--dv-lane-gut); border-color: var(--dv-lane-gut); }
+        .dayview .dv-toggle.active[data-dv-type="bowel"] { background: var(--dv-lane-bowel); border-color: var(--dv-lane-bowel); }
+        .dayview .dv-toggle.active[data-dv-type="weight"] { background: var(--dv-lane-weight); border-color: var(--dv-lane-weight); }
+
+        .dayview .dv-timeline {
+            position: relative;
+            background: #fff;
+            border: 1px solid var(--b);
+            border-radius: 16px;
+            padding: 20px 16px 24px;
+            margin-bottom: 14px;
+        }
+
+        .dayview .dv-timeaxis {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--m);
+            padding: 0 2px 6px;
+            border-bottom: 1px solid var(--b);
+            margin-bottom: 14px;
+        }
+
+        .dayview .dv-lanes {
+            position: relative;
+        }
+
+        .dayview .dv-lane {
+            position: relative;
+            height: 38px;
+            margin: 6px 0;
+            border-radius: 6px;
+            border: 1px dashed var(--b);
+            background: #f9faf9;
+        }
+
+        .dayview .dv-lane-label {
+            position: absolute;
+            left: -1px;
+            top: -7px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--m);
+            background: #f5f7f6;
+            padding: 0 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .dayview .dv-event {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+            border: 2px solid #fff;
+            z-index: 2;
+        }
+
+        .dayview .dv-event:hover {
+            transform: translate(-50%, -50%) scale(1.15);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            z-index: 5;
+        }
+
+        .dayview .dv-event[data-dv-type="food"] { background: var(--dv-lane-food); color: #fff; }
+        .dayview .dv-event[data-dv-type="glucose"] { background: var(--dv-lane-glucose); color: #fff; }
+        .dayview .dv-event[data-dv-type="gut"] { background: var(--dv-lane-gut); color: #fff; }
+        .dayview .dv-event[data-dv-type="bowel"] { background: var(--dv-lane-bowel); color: #fff; }
+        .dayview .dv-event[data-dv-type="weight"] { background: var(--dv-lane-weight); color: #fff; }
+
+        .dayview .dv-event-popup {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #17221e;
+            color: #fff;
+            padding: 6px 9px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.12s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .dayview .dv-event:hover .dv-event-popup {
+            opacity: 1;
+        }
+
+        .dayview .dv-event-popup::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-top-color: #17221e;
+        }
+
+        .dayview .dv-now {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--r);
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .dayview .dv-now::before {
+            content: 'now';
+            position: absolute;
+            top: -13px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: var(--r);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #fff;
+            padding: 0 4px;
+            border-radius: 3px;
+        }
+
+        .dayview .dv-empty {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--m);
+        }
+
+        button{
             min-height: 44px;
             border: 1px solid var(--b);
             border-radius: 12px;
@@ -364,7 +574,7 @@
             <nav><button class="tab active" data-tab="food">🍽️ Food</button><button class="tab" data-tab="glucose">🩸
                     Glucose</button><button class="tab" data-tab="symptoms">🫃 Gut</button><button class="tab"
                     data-tab="bowel">🚽 Bowel</button><button class="tab" data-tab="weight">⚖️ Weight</button><button class="tab" data-tab="timeline">🕒
-                    Timeline</button><button class="tab" data-tab="insights">📊 Insights</button><button class="tab"
+                    Timeline</button><button class="tab" data-tab="dayview">📅 Day view</button><button class="tab" data-tab="insights">📊 Insights</button><button class="tab"
                     data-tab="data">☁️ Data</button></nav>
 
             <section id="food" class="pane">
@@ -584,6 +794,23 @@
                     <div class="pager"><label>Show <select id="timelinePageSize"><option>10</option><option>25</option><option>50</option></select></label><div><button type="button" id="timelinePrev">Previous</button><span class="muted" id="timelinePageLabel"></span><button type="button" id="timelineNext">Next</button></div></div>
                 </div>
             </section>
+            <section id="dayview" class="pane hidden dayview">
+                <div class="card">
+                    <div class="dv-head">
+                        <div class="dv-date">
+                            <button type="button" class="dv-nav" id="dvPrevDay" aria-label="Previous day">◀</button>
+                            <input type="date" id="dvDate">
+                            <button type="button" class="dv-nav" id="dvNextDay" aria-label="Next day">▶</button>
+                            <button type="button" class="dv-nav" id="dvToday">Today</button>
+                        </div>
+                    </div>
+                    <div class="dv-toggles" id="dvToggles"></div>
+                    <div class="dv-timeline" id="dvTimeline">
+                        <div class="dv-timeaxis" id="dvTimeAxis"></div>
+                        <div class="dv-lanes" id="dvLanes"></div>
+                    </div>
+                </div>
+            </section>
             <section id="insights" class="pane hidden">
                 <div class="card">
                     <h2>📊 Overview</h2>
@@ -658,6 +885,108 @@
         async function loadGlucose() { try { return await loadPage('glucose_readings', 'measured_at', 'glucose') } catch (error) { if (/glucose_readings.*(measured_at|reading_time|does not exist|schema cache)|relation .*glucose_readings.*does not exist/i.test(error.message || '')) { totals.glucose = 0; return [] } throw error } }
         async function loadWeights() { try { return await loadPage('weight_entries', 'measured_at', 'weights') } catch (error) { if (/weight_entries.*(measured_at|does not exist|schema cache)|relation .*weight_entries.*does not exist/i.test(error.message || '')) { totals.weights = 0; return [] } throw error } }
         async function load() { setSync('syncing'); try { const [m, g, s, b, w] = await Promise.all([loadPage('meals', 'meal_time', 'meals'), loadGlucose(), loadPage('gut_symptoms', 'occurred_at', 'symptoms'), loadPage('bowel_movements', 'occurred_at', 'bowels'), loadWeights()]); for (const name of Object.keys(pageSize)) page[name] = Math.min(page[name], Math.max(0, Math.ceil(totals[name] / pageSize[name]) - 1)); const mealIds = m.map(meal => meal.id); const mf = mealIds.length ? await supabaseClient.from('meal_foods').select('*').in('meal_id', mealIds) : { data: [], error: null }; if (mf.error) throw mf.error; meals = m; glucose = g; symptoms = s; bowels = b; weights = w; mealFoods = mf.data || []; render(); setSync('connected') } catch (error) { setSync('error'); throw error } }
+        let dvState = { date: new Date().toISOString().slice(0, 10), toggles: { food: true, glucose: true, gut: true, bowel: true, weight: true } };
+
+        const DV_LANE_ORDER = ['food', 'glucose', 'gut', 'bowel', 'weight'];
+        const DV_LANE_LABEL = { food: 'Food', glucose: 'Glucose', gut: 'Gut', bowel: 'Bowel', weight: 'Weight' };
+        const DV_LANE_ICON = { food: '🍽️', glucose: '🩸', gut: '🫃', bowel: '🚽', weight: '⚖️' };
+        const DV_GET_EVENTS = {
+            food: () => meals.map(x => ({ type: 'food', t: x.meal_time, detail: mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })),
+            glucose: () => glucose.map(x => ({ type: 'glucose', t: x.measured_at, detail: x.glucose_mmol_l + ' mmol/L' })),
+            gut: () => symptoms.map(x => ({ type: 'gut', t: x.occurred_at, detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10' })),
+            bowel: () => bowels.map(x => ({ type: 'bowel', t: x.occurred_at, detail: 'Bristol ' + x.bristol_type })),
+            weight: () => weights.map(x => ({ type: 'weight', t: x.measured_at, detail: Number(x.weight_kg).toFixed(2) + ' kg' }))
+        };
+
+        function dvDayStart(isoDate) { return new Date(isoDate + 'T00:00:00'); }
+        function dvDayEnd(isoDate) { return new Date(isoDate + 'T23:59:59'); }
+        function dvPercentThrough(dayStart, eventTime) { const span = 86400000; return Math.max(0, Math.min(1, (new Date(eventTime).getTime() - dayStart.getTime()) / span)); }
+        function dvFormatHour(pct) { const totalMinutes = Math.round(pct * 1440); const h = Math.floor(totalMinutes / 60), m = totalMinutes % 60; return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); }
+
+        function dvBuild() {
+            const elTimeline = $('dvTimeline');
+            const elToggles = $('dvToggles');
+            const elTimeAxis = $('dvTimeAxis');
+            const elLanes = $('dvLanes');
+            if (!elTimeline || !elToggles || !elTimeAxis || !elLanes) return;
+
+            const dayStart = dvDayStart(dvState.date);
+            const now = new Date();
+            const showNowLine = dvState.date === now.toISOString().slice(0, 10);
+
+            elToggles.innerHTML = DV_LANE_ORDER.map(type => `<button type="button" class="dv-toggle ${dvState.toggles[type] ? 'active' : ''}" data-dv-type="${type}">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</button>`).join('');
+
+            elTimeAxis.innerHTML = ['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00','24:00'].map(label => `<span>${label}</span>`).join('');
+
+            const visibleTypes = DV_LANE_ORDER.filter(type => dvState.toggles[type]);
+            let html = '';
+            let eventCount = 0;
+
+            for (const type of visibleTypes) {
+                const events = DV_GET_EVENTS[type]().filter(e => { const t = new Date(e.t).getTime(); return t >= dayStart.getTime() && t <= dvDayEnd(dvState.date).getTime(); }).sort((a, b) => new Date(a.t) - new Date(b.t));
+                eventCount += events.length;
+                html += `<div class="dv-lane" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px"><span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>`;
+                if (events.length === 0) {
+                    html += `<span class="muted" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:11px;">no entries</span>`;
+                } else {
+                    for (const e of events) {
+                        const pct = dvPercentThrough(dayStart, e.t);
+                        const leftPx = pct * 100;
+                        const timeStr = dvFormatHour(pct);
+                        const detail = e.detail ? ' — ' + esc(e.detail) : '';
+                        html += `<div class="dv-event" data-dv-type="${type}" data-dv-time="${esc(timeStr)}" data-dv-detail="${esc(e.detail || '')}" style="left:${leftPx}%" title="${esc(timeStr)}${detail}">${DV_LANE_ICON[type]}<div class="dv-event-popup">${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}</div></div>`;
+                    }
+                }
+                html += '</div>';
+            }
+
+            if (showNowLine && visibleTypes.length && dvState.toggles[visibleTypes[0]]) {
+                const nowPct = dvPercentThrough(dayStart, now.toISOString());
+                if (nowPct >= 0 && nowPct <= 1) {
+                    html += `<div class="dv-now" style="left:${nowPct * 100}%"></div>`;
+                }
+            }
+
+            if (eventCount === 0) {
+                html += `<div class="dv-empty">Nothing recorded on ${dvState.date}.</div>`;
+            }
+
+            elLanes.innerHTML = html;
+        }
+
+        function dvGoTo(dateIso) {
+            dvState.date = dateIso;
+            if ($('dvDate')) $('dvDate').value = dateIso;
+            dvBuild();
+        }
+
+        function dvToggle(type) {
+            dvState.toggles[type] = !dvState.toggles[type];
+            dvBuild();
+        }
+
+        function dvToday() { dvGoTo(new Date().toISOString().slice(0, 10)); }
+
+        function dvPrev() {
+            const d = new Date(dvState.date + 'T00:00:00');
+            d.setDate(d.getDate() - 1);
+            dvGoTo(d.toISOString().slice(0, 10));
+        }
+
+        function dvNext() {
+            const d = new Date(dvState.date + 'T00:00:00');
+            d.setDate(d.getDate() + 1);
+            dvGoTo(d.toISOString().slice(0, 10));
+        }
+
+        function dvRender() { dvBuild(); }
+
+        $('dvPrevDay').onclick = dvPrev;
+        $('dvNextDay').onclick = dvNext;
+        $('dvToday').onclick = dvToday;
+        $('dvDate').onchange = () => { const val = $('dvDate').value; if (val) dvGoTo(val); };
+        $('dvToggles').onclick = event => { const btn = event.target.closest('.dv-toggle'); if (!btn) return; dvToggle(btn.dataset.dvType); };
+
         function render() {
             $('mc').textContent = totals.meals; $('gc').textContent = totals.glucose; $('xc').textContent = totals.symptoms; $('bcnt').textContent = totals.bowels; $('wcnt').textContent = totals.weights; $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || ''; mealOptions();
             $('flist').innerHTML = meals.map(x => { const foods = mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', '); const mealType = (x.meal_type || '').replace(/^./, character => character.toUpperCase()); return `<div class="entry"><strong>${esc(fmt(x.meal_time))}</strong> · ${esc(mealType)}<div>${esc(foods || x.notes || '')}</div><div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="meals" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="meals" data-delete-id="${esc(x.id)}">Delete</button></div></div>` }).join('') || '<p class="muted">No meals yet.</p>';
@@ -668,6 +997,7 @@
             updatePagers();
             const vals = glucose.map(x => Number(x.glucose_mmol_l)).filter(Number.isFinite); $('gsummary').textContent = vals.length ? `Average recorded glucose: ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)} mmol/L · Latest: ${vals[0].toFixed(1)} mmol/L` : 'Add spot readings to see your recent pattern.';
             const timelineFilter = $('timelineFilter')?.value || 'all'; const events = [...meals.map(x => ({ type: 'food', t: x.meal_time, label: '🍽️ ' + (x.meal_type || 'Meal').replace(/^./, character => character.toUpperCase()), detail: mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })), ...glucose.map(x => ({ type: 'glucose', t: x.measured_at, label: '🩸 ' + x.glucose_mmol_l + ' mmol/L', detail: x.timing || '' })), ...symptoms.map(x => ({ type: 'gut', t: x.occurred_at, label: '🫃 ' + (x.symptom_type || 'Symptom'), detail: (x.severity ?? 0) + '/10' })), ...bowels.map(x => ({ type: 'bowel', t: x.occurred_at, label: '🚽 Bristol ' + x.bristol_type, detail: '' })), ...weights.map(x => ({ type: 'weight', t: x.measured_at, label: '⚖️ ' + Number(x.weight_kg).toFixed(2) + ' kg', detail: x.notes || '' }))].filter(event => timelineFilter === 'all' || event.type === timelineFilter).sort((a, b) => new Date(b.t) - new Date(a.t)); const timelinePages = Math.max(1, Math.ceil(events.length / timelinePageSize)); timelinePage = Math.min(timelinePage, timelinePages - 1); const timelineStart = timelinePage * timelinePageSize; $('timelineList').innerHTML = events.slice(timelineStart, timelineStart + timelinePageSize).map(e => `<div class="entry"><strong>${esc(fmt(e.t))}</strong> · ${esc(e.label)}${e.detail ? ' · ' + esc(e.detail) : ''}</div>`).join('') || '<p class="muted">No records for this filter.</p>'; $('timelinePageLabel').textContent = ` ${timelinePage + 1} / ${timelinePages} `; $('timelinePrev').disabled = timelinePage === 0; $('timelineNext').disabled = timelinePage >= timelinePages - 1;
+            dvRender();
         }
         function updatePagers() { for (const name of Object.keys(pageSize)) { const totalPages = Math.max(1, Math.ceil(totals[name] / pageSize[name])); const label = document.querySelector(`[data-page-label="${name}"]`); const previous = document.querySelector(`[data-page-prev="${name}"]`); const next = document.querySelector(`[data-page-next="${name}"]`); if (label) label.textContent = ` ${page[name] + 1} / ${totalPages} `; if (previous) previous.disabled = page[name] === 0; if (next) next.disabled = page[name] >= totalPages - 1 } }
         function missingColumn(error) { const match = String(error?.message || '').match(/Could not find the '([^']+)' column of '[^']+' in the schema cache/i); return match?.[1] || null }
