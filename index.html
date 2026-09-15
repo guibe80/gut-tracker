@@ -917,8 +917,8 @@
 
         async function dvFetch(isoDate) {
             if (dvState.data && dvState.date === isoDate) return dvState.data;
-            const dayStart = dvDayStart(isoDate);
-            const dayEnd = dvDayEnd(isoDate);
+            const dayStart = dvDayStart(isoDate).toISOString();
+            const dayEnd = dvDayEnd(isoDate).toISOString();
             if (!supabaseClient || !user) return null;
             try {
                 const [mResult, gResult, sResult, bResult, wResult] = await Promise.all([
