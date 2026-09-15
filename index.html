@@ -459,6 +459,20 @@
             color: #9b2c2c
         }
 
+        .authmsg {
+            font-size: 13px;
+            min-height: 20px;
+            margin-top: 6px;
+            color: var(--m);
+            transition: color 0.2s, font-weight 0.2s
+        }
+
+        .authmsg:not(:empty) {
+            font-weight: 600;
+            color: #9b2c2c;
+            font-size: 14px
+        }
+
         .glucose {
             font-size: 30px;
             font-weight: 800
@@ -557,7 +571,7 @@
                     email</button><button id="signup">Create email account</button></div>
             <div style="margin-top:10px"><button id="github" class="github">Continue with GitHub</button></div>
             <a id="setupLink" class="setup-link" href="./setup.html">Setup</a>
-            <p id="authmsg" class="muted"></p>
+            <p id="authmsg" class="authmsg"></p>
             <p class="muted">For GitHub sign-in, your Supabase project must have GitHub enabled under Authentication →
                 Providers. Never enter a Supabase service/secret key.</p>
         </div>
@@ -874,10 +888,13 @@
         function updateSetupLink() { const link = $('setupLink'); if (link) link.classList.remove('hidden') }
         function setupClient() { if (supabaseClient) return true; const key = getStoredSupabaseKey(); if (!isLikelySupabasePublishableKey(key)) return false; supabaseClient = window.supabase.createClient(SUPABASE_URL, key); return true }
         async function reconnectAndReload() { if (!supabaseClient) { if (!setupClient()) { setSync('error'); setMsg('authmsg', 'Supabase publishable key is missing or invalid. Open setup.html first.', 'err'); return } setSync('syncing') } setSync('syncing'); try { if (user) { const { data, error } = await supabaseClient.auth.getSession(); if (error) { setSync('error'); setMsg('authmsg', 'Session refresh failed: ' + error.message, 'err'); return } if (data.session) { user = data.session.user; showApp() } else { setSync('error'); setMsg('authmsg', 'Session expired. Sign in again.', 'err'); return } } else { setMsg('authmsg', 'Not signed in. Use Sign in or Create account first.', 'err'); setSync('error'); return } await load(); setSync('connected') } catch (error) { setSync('error'); setMsg('authmsg', 'Reconnect failed: ' + error.message, 'err') } }
-        function setMsg(id, text, cls = '') { const e = $(id); if (!e) return; e.textContent = text; e.className = 'muted ' + cls }
+        function setMsg(id, text, cls = '') { const e = $(id); if (!e) return; e.textContent = text || ''; e.className = cls ? ('authmsg ' + cls) : 'authmsg' }
         function esc(v) { return String(v ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])) }
         function localIso(date, time) { return new Date(`${date}T${time || '00:00'}`).toISOString() }
         function reset() { const now = new Date(), d = now.toISOString().slice(0, 10), t = now.toTimeString().slice(0, 5); for (const [a, b] of [['fd', 'ft'], ['gd', 'gt'], ['sd', 'st'], ['bd', 'bt'], ['wd', 'wt']]) { $(a).value = d; $(b).value = t } }
+        function ac() { const off = new Date().getTimezoneOffset(); const sign = off <= 0 ? '+' : '-'; const abs = Math.abs(off); return sign + String(Math.floor(abs / 60)).padStart(2, '0') + ':' + String(abs % 60).padStart(2, '0'); }
+        function stripTz(notes) { if (!notes) return ''; return String(notes).replace(/ \[tz:[+-]\d{2}:\d{2}\]$/, ''); }
+        function parseTzNotes(notes) { if (!notes) return null; const m = String(notes).match(/ \[tz:([+-])(\d{2}):(\d{2})\]$/); if (!m) return null; return (m[1] === '+' ? 1 : -1) * (parseInt(m[2], 10) * 60 + parseInt(m[3], 10)); }
         function showApp() { $('auth').classList.add('hidden'); $('app').classList.remove('hidden'); $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || '' }
         function fmt(v) { return v ? new Date(v).toLocaleString('en-GB') : '—' }
         function mealOptions() { const opts = meals.slice(0, 100).map(m => `<option value="${m.id}">${esc(fmt(m.meal_time))} · ${esc((m.meal_type || 'meal').replace(/^./, character => character.toUpperCase()))}</option>`).join(''); $('gmeal').innerHTML = '<option value="">None / unrelated</option>' + opts; $('smeal').innerHTML = '<option value="">None</option>' + opts }
@@ -892,24 +909,24 @@
         const DV_LANE_ICON = { food: '🍽️', glucose: '🩸', gut: '🫃', bowel: '🚽', weight: '⚖️' };
 
         function dvParseDate(isoDate) { const [y, m, d] = isoDate.split('-').map(Number); return new Date(y, m - 1, d); }
-        function dvFormatDate(date) { return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0'); }
-        function dvDayStart(isoDate) { return dvParseDate(isoDate); }
-        function dvDayEnd(isoDate) { const d = new Date(dvParseDate(isoDate).getTime() + 86399999); return d; }
+        function dvFormatDate(date) { const y = date.getFullYear(); const m = String(date.getMonth() + 1).padStart(2, '0'); const d = String(date.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; }
+        function dvDayStart(isoDate) { const d = dvParseDate(isoDate); d.setHours(0, 0, 0, 0); return d; }
+        function dvDayEnd(isoDate) { const d = new Date(isoDate + 'T00:00:00'); d.setDate(d.getDate() + 1); d.setMilliseconds(-1); return d; }
         function dvPercentThrough(dayStart, eventTime) { const span = 86400000; return Math.max(0, Math.min(1, (new Date(eventTime).getTime() - dayStart.getTime()) / span)); }
         function dvFormatHour(pct) { const totalMinutes = Math.round(pct * 1440); const h = Math.floor(totalMinutes / 60), m = totalMinutes % 60; return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); }
 
         async function dvFetch(isoDate) {
             if (dvState.data && dvState.date === isoDate) return dvState.data;
-            const start = isoDate + 'T00:00:00';
-            const end = isoDate + 'T23:59:59';
+            const dayStart = dvDayStart(isoDate);
+            const dayEnd = dvDayEnd(isoDate);
             if (!supabaseClient || !user) return null;
             try {
                 const [mResult, gResult, sResult, bResult, wResult] = await Promise.all([
-                    supabaseClient.from('meals').select('*').gte('meal_time', start).lte('meal_time', end).order('meal_time'),
-                    supabaseClient.from('glucose_readings').select('*').gte('measured_at', start).lte('measured_at', end).order('measured_at'),
-                    supabaseClient.from('gut_symptoms').select('*').gte('occurred_at', start).lte('occurred_at', end).order('occurred_at'),
-                    supabaseClient.from('bowel_movements').select('*').gte('occurred_at', start).lte('occurred_at', end).order('occurred_at'),
-                    supabaseClient.from('weight_entries').select('*').gte('measured_at', start).lte('measured_at', end).order('measured_at')
+                    supabaseClient.from('meals').select('*').gte('meal_time', dayStart).lte('meal_time', dayEnd).order('meal_time'),
+                    supabaseClient.from('glucose_readings').select('*').gte('measured_at', dayStart).lte('measured_at', dayEnd).order('measured_at'),
+                    supabaseClient.from('gut_symptoms').select('*').gte('occurred_at', dayStart).lte('occurred_at', dayEnd).order('occurred_at'),
+                    supabaseClient.from('bowel_movements').select('*').gte('occurred_at', dayStart).lte('occurred_at', dayEnd).order('occurred_at'),
+                    supabaseClient.from('weight_entries').select('*').gte('measured_at', dayStart).lte('measured_at', dayEnd).order('measured_at')
                 ]);
                 if (mResult.error) throw mResult.error;
                 if (gResult.error) throw gResult.error;
@@ -934,11 +951,11 @@
             const dayEnd = dvDayEnd(dvState.date).getTime();
             const filter = e => { const t = new Date(e.t).getTime(); return t >= dayStart && t <= dayEnd; };
             switch (type) {
-                case 'food': return data.meals.map(x => ({ type: 'food', t: x.meal_time, detail: data.mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
-                case 'glucose': return data.glucose.map(x => ({ type: 'glucose', t: x.measured_at, detail: x.glucose_mmol_l + ' mmol/L' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
-                case 'gut': return data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
-                case 'bowel': return data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, detail: 'Bristol ' + x.bristol_type })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
-                case 'weight': return data.weights.map(x => ({ type: 'weight', t: x.measured_at, detail: Number(x.weight_kg).toFixed(2) + ' kg' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'food': return data.meals.map(x => ({ type: 'food', t: x.meal_time, tz: parseTzNotes(x.notes), detail: data.mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'glucose': return data.glucose.map(x => ({ type: 'glucose', t: x.measured_at, tz: parseTzNotes(x.notes), detail: x.glucose_mmol_l + ' mmol/L' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'gut': return data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'bowel': return data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: 'Bristol ' + x.bristol_type })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'weight': return data.weights.map(x => ({ type: 'weight', t: x.measured_at, tz: parseTzNotes(x.notes), detail: Number(x.weight_kg).toFixed(2) + ' kg' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
                 default: return [];
             }
         }
@@ -952,7 +969,7 @@
 
             const dayStart = dvDayStart(dvState.date);
             const now = new Date();
-            const showNowLine = dvState.date === now.toISOString().slice(0, 10);
+            const showNowLine = dvState.date === dvFormatDate(now);
 
             elToggles.innerHTML = DV_LANE_ORDER.map(type => `<button type="button" class="dv-toggle ${dvState.toggles[type] ? 'active' : ''}" data-dv-type="${type}">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</button>`).join('');
 
@@ -978,7 +995,8 @@
             }
 
             if (showNowLine && visibleTypes.length && dvState.toggles[visibleTypes[0]] && eventCount > 0) {
-                const nowPct = dvPercentThrough(dayStart, now.toISOString());
+                const nowMs = now.getTime();
+                const nowPct = dvPercentThrough(dayStart, nowMs);
                 if (nowPct >= 0 && nowPct <= 1) {
                     html += `<div class="dv-now" style="left:${nowPct * 100}%"></div>`;
                 }
@@ -1021,11 +1039,9 @@
 
         function dvToggle(type) {
             dvState.toggles[type] = !dvState.toggles[type];
-            dvState.data = null;
-            dvBuild();
         }
 
-        function dvToday() { dvGoTo(new Date().toISOString().slice(0, 10)); }
+        function dvToday() { dvGoTo(dvFormatDate(new Date())); }
 
         function dvPrev() {
             const d = new Date(dvParseDate(dvState.date).getTime());
