@@ -18,7 +18,7 @@ Do not assume database structures that aren't present in these files.
 
 ## Authentication
 
-Supabase Auth is used.
+Supabase Auth is used. It stores **Supabase publishable key** in local explorer, not in code. It must be stored first by running setup.html. Once stored is possible use githug oauth to access the supabase and the PWA. 
 
 Users are identified by:
 `auth.uid()`
