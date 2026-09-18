@@ -17,6 +17,7 @@ Use Semantic Versioning: MAJOR.MINOR.PATCH.
 - New backwards-compatible functionality → increment MINOR.
 - Bug fix → increment PATCH.
 - Breaking change → increment MAJOR.
+- Always confirm, if testing was successful, so the next version can be released.
 
 When completing a feature:
 1. Determine the appropriate version increment.
