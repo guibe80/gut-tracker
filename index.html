@@ -260,6 +260,14 @@
             border-radius: 3px;
         }
 
+        .dayview .dv-lane.has-yaxis { height: 70px; padding-left: 56px; }
+        .dayview .dv-yaxis { position: absolute; left: 0; top: 0; bottom: 0; width: 50px; }
+        .dayview .dv-yaxis span { position: absolute; bottom: 0; right: 0; text-align: right; padding-right: 4px; font-size: 9px; color: var(--m); line-height: 1; }
+        .dayview .dv-yaxis-label { position: absolute; left: 50px; top: 50%; transform: translateY(-50%); width: 50px; text-align: right; font-size: 8px; color: var(--m); line-height: 1; }
+        .dayview .dv-info { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); text-align: right; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; color: #fff; opacity: 0.85; white-space: nowrap; z-index: 3; }
+        .dayview .dv-event.has-yaxis { top: auto; transform: translate(-50%, 50%); }
+        .dayview .dv-trend { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
         .dayview .dv-empty {
             text-align: center;
             padding: 32px 16px;
@@ -877,13 +885,14 @@
                     <p id="userInfo" class="muted"></p>
                     <p class="muted">Supabase URL is built into this app. Your publishable key stays in this browser
                         only.</p>
+                    <div class="row" style="margin-top:10px"><button id="checkUpdate">Check for updates</button><span id="updateMsg" class="muted" style="margin-left:8px"></span></div>
                 </div>
             </section>
             <footer class="version">Gut + Glucose Tracker · Version <span data-app-version></span></footer>
         </div>
     </main>
     <script>
-        const VERSION = APP_VERSION, SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co'; let supabaseClient = null, user = null, meals = [], glucose = [], symptoms = [], bowels = [], weights = [], mealFoods = []; const pageSize = { meals: 10, glucose: 10, symptoms: 10, bowels: 10, weights: 10 }, page = { meals: 0, glucose: 0, symptoms: 0, bowels: 0, weights: 0 }, totals = { meals: 0, glucose: 0, symptoms: 0, bowels: 0, weights: 0 }; let timelinePageSize = 10, timelinePage = 0; const $ = id => document.getElementById(id); document.title += ` V${VERSION}`; document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${VERSION}` });
+        const VERSION = APP_VERSION, SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co'; let supabaseClient = null, user = null, meals = [], glucose = [], symptoms = [], bowels = [], weights = [], mealFoods = []; const pageSize = { meals: 10, glucose: 10, symptoms: 10, bowels: 10, weights: 10 }, page = { meals: 0, glucose: 0, symptoms: 0, bowels: 0, weights: 0 }, totals = { meals: 0, glucose: 0, symptoms: 0, bowels: 0, weights: 0 }; let timelinePageSize = 10, timelinePage = 0; const $ = id => document.getElementById(id); document.title += ` V${VERSION}`; document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${VERSION}` }); const DV_REDIRECT = ''; // override: set to e.g. 'http://192.168.1.5:8080/' to force, empty = auto-detect
         function setSync(state, detail = '') { const labels = { connected: '🟢 connected', syncing: '🟠 syncing', error: '🔴 cloud error' }; const element = $('sync'); if (!element) return; element.textContent = labels[state]; element.title = detail || labels[state]; element.className = 'sync ' + state }
         function updateSetupLink() { const link = $('setupLink'); if (link) link.classList.remove('hidden') }
         function setupClient() { if (supabaseClient) return true; const key = getStoredSupabaseKey(); if (!isLikelySupabasePublishableKey(key)) return false; supabaseClient = window.supabase.createClient(SUPABASE_URL, key); return true }
@@ -951,11 +960,11 @@
             const dayEnd = dvDayEnd(dvState.date).getTime();
             const filter = e => { const t = new Date(e.t).getTime(); return t >= dayStart && t <= dayEnd; };
             switch (type) {
-                case 'food': return data.meals.map(x => ({ type: 'food', t: x.meal_time, tz: parseTzNotes(x.notes), detail: data.mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
-                case 'glucose': return data.glucose.map(x => ({ type: 'glucose', t: x.measured_at, tz: parseTzNotes(x.notes), detail: x.glucose_mmol_l + ' mmol/L' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'food': return data.meals.map(x => ({ type: 'food', t: x.meal_time, tz: parseTzNotes(x.notes), detail: data.mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', '), value: x.estimated_carbohydrate_g || 0 })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'glucose': return data.glucose.map(x => ({ type: 'glucose', t: x.measured_at, tz: parseTzNotes(x.notes), detail: x.glucose_mmol_l + ' mmol/L', value: x.glucose_mmol_l })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
                 case 'gut': return data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
                 case 'bowel': return data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: 'Bristol ' + x.bristol_type })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
-                case 'weight': return data.weights.map(x => ({ type: 'weight', t: x.measured_at, tz: parseTzNotes(x.notes), detail: Number(x.weight_kg).toFixed(2) + ' kg' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+                case 'weight': return data.weights.map(x => ({ type: 'weight', t: x.measured_at, tz: parseTzNotes(x.notes), detail: Number(x.weight_kg).toFixed(2) + ' kg', value: x.weight_kg })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
                 default: return [];
             }
         }
@@ -980,16 +989,60 @@
             let html = '';
             let eventCount = 0;
 
+            const YAXIS_RANGES = { glucose: { min: 4, max: 15, label: 'mmol/L' }, weight: { auto: true, label: 'kg' }, food: { auto: true, label: 'g carbs' } };
+
             for (const type of visibleTypes) {
                 const events = dvGetEvents(data, type);
                 if (events.length === 0) continue;
                 eventCount += events.length;
-                html += `<div class="dv-lane" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px"><span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>`;
+
+                const yaxis = YAXIS_RANGES[type];
+                let laneClass = 'dv-lane';
+                let yaxisHtml = '';
+                let trendHtml = '';
+                let yMin, yMax;
+
+                if (yaxis) {
+                    laneClass += ' has-yaxis';
+                    if (type === 'glucose') {
+                        yMin = yaxis.min; yMax = yaxis.max;
+                    } else if (yaxis.auto && events.length > 0) {
+                        const vals = events.map(e => e.value).filter(v => typeof v === 'number' && Number.isFinite(v));
+                        if (vals.length) { yMin = type === 'food' ? 0 : Math.min(...vals) - 2; yMax = Math.max(...vals) + 2; }
+                    }
+                    if (yMin !== undefined && yMax !== undefined && yMax > yMin) {
+                        const range = yMax - yMin;
+                        const step = type === 'food' ? (range <= 50 ? 5 : 10) : (range <= 6 ? 1 : range <= 20 ? 2 : 5);
+                        const ticks = [];
+                        for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) ticks.push(v);
+                        yaxisHtml = `<div class="dv-yaxis">${ticks.map(v => { const pct = ((v - yMin) / (yMax - yMin)) * 100; return `<span style="bottom:${pct}%">${Number.isInteger(v) ? v : v.toFixed(1)}</span>`; }).join('')}</div><span class="dv-yaxis-label">${yaxis.label || ''}</span>`;
+                        if (events.length > 1) {
+                            const lines = [];
+                            for (let i = 1; i < events.length; i++) {
+                                const prev = events[i - 1];
+                                const curr = events[i];
+                                const prevPct = dvPercentThrough(dayStart, prev.t);
+                                const currPct = dvPercentThrough(dayStart, curr.t);
+                                const prevV = ((prev.value - yMin) / (yMax - yMin)) * 100;
+                                const currV = ((curr.value - yMin) / (yMax - yMin)) * 100;
+                                lines.push(`<line x1="${prevPct * 100}%" y1="${100 - prevV}%" x2="${currPct * 100}%" y2="${100 - currV}%" stroke="var(--dv-lane-${type})" stroke-width="2" opacity="0.35" stroke-dasharray="4 2"/>`);
+                            }
+                            trendHtml = `<svg class="dv-trend" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1">${lines.join('')}</svg>`;
+                        }
+                    }
+                }
+
+                html += `<div class="${laneClass}" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px">${trendHtml}${yaxisHtml}<span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>${type === 'food' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-food)">${events.reduce((s,e) => s + (e.value || 0), 0).toFixed(0)}g carbs</div>` : ''}${type === 'glucose' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-glucose)">avg ${(events.reduce((s,e) => s + e.value, 0) / events.length).toFixed(1)}</div>` : ''}`;
                 for (const e of events) {
                     const pct = dvPercentThrough(dayStart, e.t);
                     const leftPct = pct * 100;
                     const timeStr = dvFormatHour(pct);
-                    html += `<div class="dv-event" data-dv-type="${type}" data-dv-time="${esc(timeStr)}" data-dv-detail="${esc(e.detail || '')}" style="left:${leftPct}%" title="${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}">${DV_LANE_ICON[type]}<div class="dv-event-popup">${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}</div></div>`;
+                    let eventStyle = `left:${leftPct}%`;
+                    if (yaxis && e.value !== undefined && Number.isFinite(e.value) && yMax > yMin) {
+                        const vPct = ((e.value - yMin) / (yMax - yMin)) * 100;
+                        eventStyle += `;bottom:${vPct}%`;
+                    }
+                    html += `<div class="dv-event${yaxis ? ' has-yaxis' : ''}" data-dv-type="${type}" data-dv-time="${esc(timeStr)}" data-dv-detail="${esc(e.detail || '')}" style="${eventStyle}" title="${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}">${DV_LANE_ICON[type]}<div class="dv-event-popup">${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}</div></div>`;
                 }
                 html += '</div>';
             }
@@ -1059,7 +1112,7 @@
         $('dvNextDay').addEventListener('click', dvNext);
         $('dvToday').addEventListener('click', dvToday);
         $('dvDate').addEventListener('change', () => { const val = $('dvDate').value; if (val) dvGoTo(val); });
-        $('dvToggles').addEventListener('click', event => { const btn = event.target.closest('.dv-toggle'); if (!btn) return; dvToggle(btn.dataset.dvType); });
+        $('dvToggles').addEventListener('click', event => { const btn = event.target.closest('.dv-toggle'); if (!btn) return; dvToggle(btn.dataset.dvType); dvBuild(); });
 
         function render() {
             $('mc').textContent = totals.meals; $('gc').textContent = totals.glucose; $('xc').textContent = totals.symptoms; $('bcnt').textContent = totals.bowels; $('wcnt').textContent = totals.weights; $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || ''; mealOptions();
@@ -1118,8 +1171,27 @@
         function recordTime(o) { const direct = pick(o, ['timestamp', 'datetime', 'dateTime', 'createdAt', 'created_at']); if (direct) { const d = new Date(direct); if (!Number.isNaN(d.getTime())) return d.toISOString() } const d = pick(o, ['date', 'day']); const t = pick(o, ['time']); if (d) { const dt = new Date(`${d}T${t || '00:00'}`); if (!Number.isNaN(dt.getTime())) return dt.toISOString() } return null }
         $('export').onclick = () => { const out = { version: 3, exportedAt: new Date().toISOString(), meals, meal_foods: mealFoods, glucose_readings: glucose, gut_symptoms: symptoms, bowel_movements: bowels, weight_entries: weights }; const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gut-tracker-v3-backup.json'; a.click(); URL.revokeObjectURL(a.href) };
         $('signout').onclick = async () => { await supabaseClient.auth.signOut(); location.reload() };
+        $('checkUpdate').onclick = async () => {
+            const msg = $('updateMsg');
+            msg.textContent = 'Checking…'; msg.className = 'muted';
+            try {
+                if ('serviceWorker' in navigator) {
+                    const reg = await navigator.serviceWorker.ready;
+                    let updated = false;
+                    navigator.serviceWorker.addEventListener('controllerchange', () => { updated = true; msg.textContent = 'Updating…'; location.reload() }, { once: true });
+                    reg.update();
+                    setTimeout(() => { if (!updated) { msg.textContent = 'Already up to date.'; msg.className = 'muted ok' } }, 10000);
+                } else {
+                    msg.textContent = 'No SW — forcing network reload…'; msg.className = 'muted';
+                    location.href = location.pathname + '?v=' + Date.now();
+                }
+            } catch (e) {
+                msg.textContent = 'Update check failed — retrying…'; msg.className = 'muted';
+                setTimeout(() => { location.href = location.pathname + '?v=' + Date.now() }, 500);
+            }
+        };
         $('sync').onclick = reconnectAndReload;
-        $('github').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is missing or invalid. Open setup.html and enter the key from Supabase Project Settings → API.', 'err'); return } setMsg('authmsg', 'Opening GitHub sign-in…'); const redirectTo = window.location.origin + window.location.pathname; try { const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'github', options: { redirectTo } }); if (error) setMsg('authmsg', 'GitHub sign-in failed: ' + error.message, 'err') } catch (err) { setMsg('authmsg', 'GitHub sign-in failed: ' + (err?.message || err), 'err') } };
+        $('github').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is missing or invalid. Open setup.html and enter the key from Supabase Project Settings → API.', 'err'); return } setMsg('authmsg', 'Opening GitHub sign-in…'); const redirectTo = DV_REDIRECT || window.location.origin + window.location.pathname; console.log('[auth] redirectTo:', redirectTo); try { const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'github', options: { redirectTo } }); if (error) setMsg('authmsg', 'GitHub sign-in failed: ' + error.message, 'err') } catch (err) { setMsg('authmsg', 'GitHub sign-in failed: ' + (err?.message || err), 'err') } };
         $('login').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is not configured. Open setup.html first.', 'err'); return } setSync('syncing'); const { data, error } = await supabaseClient.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value }); if (error) { setSync('error'); setMsg('authmsg', error.message, 'err'); return } setSync('connected'); user = data.user; showApp(); try { await load() } catch (e) { setMsg('authmsg', e.message, 'err') } };
         $('signup').onclick = async () => { if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is not configured. Open setup.html first.', 'err'); return } setSync('syncing'); const { data, error } = await supabaseClient.auth.signUp({ email: $('email').value.trim(), password: $('password').value }); if (error) { setSync('error'); setMsg('authmsg', error.message, 'err'); return } setSync('connected'); setMsg('authmsg', data.session ? 'Account created and signed in.' : 'Account created. Check your email to confirm it, then sign in.', 'ok') };
         window.addEventListener('load', async () => { reset(); updateSetupLink(); if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').then(registration => registration.update()).catch(err => console.warn('Service worker registration failed:', err)) } if (!setupClient()) { setMsg('authmsg', 'Supabase publishable key is missing or invalid. Open setup.html and enter the key from Supabase Project Settings → API.', 'err'); return } setSync('syncing'); const { data, error } = await supabaseClient.auth.getSession(); if (error) { setSync('error'); setMsg('authmsg', error.message, 'err'); return } setSync('connected'); if (data.session) { user = data.session.user; showApp(); try { await load() } catch (e) { setMsg('authmsg', e.message, 'err') } } });

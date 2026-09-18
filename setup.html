@@ -102,7 +102,7 @@
             if (!isLikelySupabasePublishableKey(value)) { msg.textContent = 'Enter a valid Supabase publishable key from Project Settings → API.'; return }
             storeSupabaseKey(value);
             const client = window.supabase.createClient(SUPABASE_URL, value);
-            const redirectTo = new URL('./index.html', window.location.href).href;
+            const redirectTo = window.location.origin + '/';
             const { error } = await client.auth.signInWithOAuth({ provider: 'github', options: { redirectTo } });
             if (error) msg.textContent = error.message;
         };
