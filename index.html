@@ -885,14 +885,14 @@
                     <p id="userInfo" class="muted"></p>
                     <p class="muted">Supabase URL is built into this app. Your publishable key stays in this browser
                         only.</p>
-                    <div class="row" style="margin-top:10px"><button id="checkUpdate">Check for updates</button><span id="updateMsg" class="muted" style="margin-left:8px"></span></div>
+                    <div class="row" style="margin-top:10px"><button id="checkUpdate">Check for updates</button><span id="updateMsg" class="muted" style="margin-left:8px"></span><span class="muted" style="margin-left:8px">v<span id="curVersion"></span></span></div>
                 </div>
             </section>
             <footer class="version">Gut + Glucose Tracker · Version <span data-app-version></span></footer>
         </div>
     </main>
     <script>
-        const VERSION = APP_VERSION, SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co'; let supabaseClient = null, user = null, meals = [], glucose = [], symptoms = [], bowels = [], weights = [], mealFoods = []; const pageSize = { meals: 10, glucose: 10, symptoms: 10, bowels: 10, weights: 10 }, page = { meals: 0, glucose: 0, symptoms: 0, bowels: 0, weights: 0 }, totals = { meals: 0, glucose: 0, symptoms: 0, bowels: 0, weights: 0 }; let timelinePageSize = 10, timelinePage = 0; const $ = id => document.getElementById(id); document.title += ` V${VERSION}`; document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${VERSION}` }); const DV_REDIRECT = ''; // override: set to e.g. 'http://192.168.1.5:8080/' to force, empty = auto-detect
+        const VERSION = APP_VERSION, SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co'; let supabaseClient = null, user = null, meals = [], glucose = [], symptoms = [], bowels = [], weights = [], mealFoods = []; const pageSize = { meals: 10, glucose: 10, symptoms: 10, bowels: 10, weights: 10 }, page = { meals: 0, glucose: 0, symptoms: 0, bowels: 0, weights: 0 }, totals = { meals: 0, glucose: 0, symptoms: 0, bowels: 0, weights: 0 }; let timelinePageSize = 10, timelinePage = 0; const $ = id => document.getElementById(id); document.title += ` V${VERSION}`; document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${VERSION}` }); $('curVersion').textContent = VERSION; const DV_REDIRECT = ''; // override: set to e.g. 'http://192.168.1.5:8080/' to force, empty = auto-detect
         function setSync(state, detail = '') { const labels = { connected: '🟢 connected', syncing: '🟠 syncing', error: '🔴 cloud error' }; const element = $('sync'); if (!element) return; element.textContent = labels[state]; element.title = detail || labels[state]; element.className = 'sync ' + state }
         function updateSetupLink() { const link = $('setupLink'); if (link) link.classList.remove('hidden') }
         function setupClient() { if (supabaseClient) return true; const key = getStoredSupabaseKey(); if (!isLikelySupabasePublishableKey(key)) return false; supabaseClient = window.supabase.createClient(SUPABASE_URL, key); return true }
