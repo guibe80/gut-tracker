@@ -40,7 +40,7 @@ function installHbA1cTrend() {
 
     const render = async () => {
         try {
-            if (!window.supabaseClient || !window.user || !window.supabaseClient.from) return;
+            if (typeof supabaseClient === 'undefined' || !supabaseClient || typeof user === 'undefined' || !user || !supabaseClient.from) return;
             const now = new Date();
             const periods = [
                 { label: '7 days', days: 7 },
@@ -49,10 +49,10 @@ function installHbA1cTrend() {
                 { label: '12 weeks', days: 84 }
             ];
             const oldest = new Date(now.getTime() - 84 * 86400000).toISOString();
-            const { data, error } = await window.supabaseClient
+            const { data, error } = await supabaseClient
                 .from('glucose_readings')
                 .select('measured_at, glucose_mmol_l')
-                .eq('user_id', window.user.id)
+                .eq('user_id', user.id)
                 .gte('measured_at', oldest)
                 .order('measured_at', { ascending: false });
             if (error) return;
@@ -68,23 +68,25 @@ function installHbA1cTrend() {
                 insights.insertBefore(card, snapshot || insights.firstChild);
             }
 
-            const current = calculate(data.filter(r => new Date(r.measured_at) >= new Date(now.getTime() - 7 * 86400000)));
             const rows = periods.map(p => {
                 const cutoff = new Date(now.getTime() - p.days * 86400000);
                 const result = calculate(data.filter(r => new Date(r.measured_at) >= cutoff));
                 return `<div class="metricbox"><div class="muted">${p.label}</div><div class="metric">${result ? fmtEstimate(result.hba1c) : '—'}</div><div class="muted">${result ? `avg ${result.avg.toFixed(1)} mmol/L · n=${result.n}` : 'Not enough data'}</div></div>`;
             }).join('');
 
-            const direction = current ? (current.hba1c <= 48 ? 'Estimated range is around the low-40s at present.' : 'Estimated value is above the low-40s; continue tracking.') : 'Add more glucose readings to establish a trend.';
-            card.innerHTML = `<h2>🩸 Estimated HbA1c trend</h2><p class="muted">Calculated from your recorded spot glucose readings using the ADAG glucose-to-HbA1c relationship. This is an estimate, not a laboratory HbA1c result.</p><div class="metrics">${rows}</div><p class="muted" style="margin-top:10px">${direction} More complete sampling over 8–12 weeks gives a more meaningful trend than a single week's readings.</p>`;
+            card.innerHTML = `<h2>🩸 Estimated HbA1c trend</h2><p class="muted">Calculated from your recorded spot glucose readings using the ADAG glucose-to-HbA1c relationship. This is an estimate, not a laboratory HbA1c result.</p><div class="metrics">${rows}</div><p class="muted" style="margin-top:10px">Use the 8–12 week estimates for trend interpretation; a single week's readings are much less reliable.</p>`;
         } catch (_) {
             // Keep the tracker usable if the optional trend calculation is unavailable.
         }
     };
 
     const waitForApp = () => {
-        if (window.supabaseClient && window.user) render();
-        else setTimeout(waitForApp, 1000);
+        try {
+            if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof user !== 'undefined' && user) render();
+            else setTimeout(waitForApp, 1000);
+        } catch (_) {
+            setTimeout(waitForApp, 1000);
+        }
     };
     waitForApp();
     window.addEventListener('focus', render);
