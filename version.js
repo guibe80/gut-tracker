@@ -1,4 +1,4 @@
-const APP_VERSION = '3.6.0';
+const APP_VERSION = '3.7.0';
 
 const SUPABASE_KEY_STORAGE = 'gut_tracker_publishable_key';
 
@@ -29,7 +29,7 @@ function installHbA1cTrend() {
         return (pct - 2.15) * 10.929;
     };
 
-    const fmtEstimate = value => Number.isFinite(value) ? `${Math.round(value)} mmol/mol` : '—';
+    const fmtEstimate = value => Number.isFinite(value) ? `${Math.round(value)} mmol/mol (${(((value / 10.929) + 2.15)).toFixed(1)}%)` : '—';
 
     const calculate = rows => {
         const values = rows.map(r => Number(r.glucose_mmol_l)).filter(Number.isFinite);
