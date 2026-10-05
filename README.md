@@ -46,7 +46,11 @@ gut-tracker/
 ├── sw.js                   # Service worker: caching, offline shell, version patching
 ├── version.js              # APP_VERSION constant + Supabase key storage helpers
 ├── utils/
-│   └── datetime.js         # Pure datetime utility functions (localIso, fmt, dv* helpers)
+│   ├── datetime.js           # Pure datetime utilities (localIso, fmt, dv* helpers)
+│   ├── supabase-helpers.js   # Supabase error handling (missingColumn, isNetworkError, wait)
+│   ├── validation.js         # Input validation (supportedMealType)
+│   ├── html.js               # HTML escaping (esc)
+│   └── data-mapping.js       # V2 data extraction (pick, pickArray, recordTime)
 ├── manifest.webmanifest    # PWA install manifest
 ├── icon-192.png            # PWA icon (192px)
 ├── icon-512.png            # PWA icon (512px)
@@ -65,7 +69,11 @@ gut-tracker/
 │   ├── smoke.test.js       # Browser smoke tests for critical flows
 │   ├── server.js           # Static file server for smoke tests
 │   └── unit/
-│       └── datetime.test.js  # Unit tests for datetime utilities
+│       ├── datetime.test.js         # Unit tests for datetime utilities
+│       ├── html.test.js             # Unit tests for HTML escaping
+│       ├── supabase-helpers.test.js # Unit tests for Supabase helpers
+│       ├── validation.test.js       # Unit tests for validation helpers
+│       └── data-mapping.test.js     # Unit tests for V2 data mapping
 ├── Makefile                # Repeatable syntax checks + dev server
 ├── AGENTS.md               # Agent workflow: git, release, safety rules
 ├── AI_CONTEXT.md           # Architecture, data rules, project checks
@@ -76,7 +84,7 @@ gut-tracker/
 
 ### Key architecture notes
 
-- **Static PWA** — no build system, no package manager, no bundler. All app logic lives in a single `<script>` block in `index.html`.
+- **Static PWA** — no build system, no package manager, no bundler. `index.html` loads utility modules from `utils/` via `<script>` tags, then contains the main application logic (Supabase CRUD, UI rendering, event handlers) in a single `<script>` block.
 - **Supabase backend** — Auth + PostgreSQL with RLS. The service worker (`sw.js`) patches responses from older cached app shells for version compatibility.
 - **`version.js`** is the single source of truth for `APP_VERSION`. It is imported by `sw.js`, `index.html`, and `setup.html`.
 - **`VERSION` file** mirrors the version string in `version.js`. Keep both aligned for releases.
