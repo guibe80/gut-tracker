@@ -56,13 +56,31 @@ Daily lifestyle/context information.
 ### weight_entries
 Weight measurements.
 
-## Important development rules
+# AI Context
 
-1. Do not modify the database schema unless explicitly requested.
-2. Do not disable RLS.
-3. Do not expose service-role credentials to the client.
-4. Respect existing foreign-key relationships.
-5. Use the generated `Database` type for Supabase queries.
-6. When changing the database, create a migration.
-7. After a schema change, regenerate `types.ts`.
-8. Update `SCHEMA-SNAPSHOT.md` after schema changes.
+## App
+- Static installable PWA; no build system or package manager. `index.html` contains UI, styles, and app logic; data/auth use Supabase directly.
+- `setup.html` stores the Supabase publishable key in browser local storage. Never use a service-role key in client code.
+- `sw.js` handles caching and legacy app-shell compatibility rewriting. Do not remove or simplify it without checking installed-client behavior.
+- Keep this file as the concise project reference. `AGENTS.md` contains Git and release workflow rules.
+
+## Data and security
+- Schema snapshot: `supabase/SCHEMA-SNAPSHOT.md`; generated types: `supabase/types.ts`. Snapshot last checked 2026-09-12; verify live columns and RLS before changing queries or payloads.
+- Supabase Auth identifies users with `auth.uid()`; user data uses `user_id`. Preserve RLS and foreign keys.
+- Never commit secrets, keys, or personal health data. Keep future AI credentials server-side; validate AI output and require user review before saving.
+- Database changes require a migration; regenerate `types.ts` and update the schema snapshot.
+- Meal nutrition belongs on `meals` (`estimated_carbohydrate_g`, `protein_estimate_g`, `fibre_estimate_g`). `meal_foods` stores food descriptions and optional child details. Preserve schema-fallback handling for optional columns.
+- Check glucose field mapping before edits: UI fields `context` / `estimated_meal_carbs_g` differ from snapshot fields `reading_context` / `carbohydrate_estimate_g`.
+
+## Change and verify
+- Preserve existing behavior; make small, focused changes.
+- **Required checks before every change** (enforced via `make check`):
+  1. `node --check version.js` and `node --check sw.js` — JavaScript syntax validation
+  2. HTML structure validation for `index.html` and `setup.html` (DOCTYPE, `<html>`, `<body>` tags)
+  3. `git diff --check` — whitespace error detection
+- **Required checks before merging a refactor** (`make smoke`):
+  - Browser smoke tests via Playwright (see `tests/smoke.test.js`): app loads, auth screen visible, service worker registers, navigation tabs present, manifest valid
+  - For UI/data changes: test create/edit and reload with a normal user
+  - For PWA changes: test offline and update behavior
+- `version.js` drives the displayed app and service-worker cache version; keep `VERSION` aligned for releases. Do not bump versions for refactoring alone.
+- Product references: `V3-MIGRATION.md`, `V3.3-ROADMAP.md`, `V4-ROADMAP.md`.
