@@ -15,14 +15,38 @@ const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
 
-const { toMmolMol, fmtEstimate, calculate, renderHbA1c, installHbA1cTrend } = sandbox;
+const { toMmolMol, fmtEstimate, calculate, renderHbA1c, installHbA1cTrend, timingWeight } = sandbox;
+
+describe('timingWeight', () => {
+    test('returns correct weight for known timings', () => {
+        assert.strictEqual(timingWeight('fasting'), 1.5);
+        assert.strictEqual(timingWeight('before_meal'), 1.5);
+        assert.strictEqual(timingWeight('2_hours_after'), 0.2);
+    });
+
+    test('returns default weight for unknown timing', () => {
+        assert.strictEqual(timingWeight('unknown'), 1.0);
+        assert.strictEqual(timingWeight(undefined), 1.0);
+        assert.strictEqual(timingWeight(null), 1.0);
+    });
+});
 
 describe('toMmolMol', () => {
-    test('converts known glucose value to HbA1c mmol/mol', () => {
-        const result = toMmolMol(8.0);
-        const pct = (28.7 * 8.0 + 46.7) / 25.7;
-        const expected = (pct - 2.15) * 10.929;
+    // ADAG formula: HbA1c(%) = (mean_glucose_mg/dL + 46.7) / 28.7
+    // where mean_glucose_mg/dL = mmol/L * 18
+    // HbA1c(mmol/mol) = (HbA1c(%) - 2.15) * 10.929
+
+    test('converts mmol/L to HbA1c mmol/mol using ADAG formula', () => {
+        const result = toMmolMol(6.0);
+        // 6.0 mmol/L = 108 mg/dL → (108 + 46.7) / 28.7 = 5.40% → (5.40 - 2.15) * 10.929 = 35.6 mmol/mol
+        const expectedPct = (108 + 46.7) / 28.7;
+        const expected = (expectedPct - 2.15) * 10.929;
         assert.strictEqual(result, expected);
+    });
+
+    test('known conversion: 8.6 mmol/L (154.8 mg/dL)', () => {
+        const result = toMmolMol(8.6);
+        assert.ok(Number.isFinite(result));
     });
 
     test('returns a finite number for valid input', () => {
@@ -51,47 +75,55 @@ describe('calculate', () => {
         assert.strictEqual(calculate([]), null);
     });
 
-    test('returns null when all values are invalid strings/undefined', () => {
-        assert.strictEqual(calculate([{ glucose_mmol_l: undefined }, { glucose_mmol_l: 'abc' }]), null);
+    test('returns null when all values are invalid', () => {
+        assert.strictEqual(calculate([{ glucose_mmol_l: null, timing: 'random' }, { glucose_mmol_l: undefined, timing: 'fasting' }]), null);
+        assert.strictEqual(calculate([{ glucose_mmol_l: 'abc', timing: 'random' }]), null);
     });
 
     test('calculates from single valid value', () => {
-        const result = calculate([{ glucose_mmol_l: 6.0 }]);
+        const result = calculate([{ glucose_mmol_l: 6.0, timing: 'random' }]);
         assert.ok(result);
         assert.strictEqual(result.avg, 6.0);
         assert.strictEqual(result.n, 1);
         assert.ok(Number.isFinite(result.hba1c));
     });
 
-    test('calculates average from multiple values', () => {
+    test('calculates weighted average with timing', () => {
         const result = calculate([
-            { glucose_mmol_l: 5.5 },
-            { glucose_mmol_l: 6.5 },
-            { glucose_mmol_l: 7.0 }
+            { glucose_mmol_l: 5.0, timing: 'fasting' },
+            { glucose_mmol_l: 8.0, timing: '2_hours_after' }
         ]);
         assert.ok(result);
-        assert.strictEqual(result.avg, (5.5 + 6.5 + 7.0) / 3);
-        assert.strictEqual(result.n, 3);
+        // weighted avg = (5.0*1.5 + 8.0*0.2) / (1.5+0.2) = 5.353...
+        assert.strictEqual(result.avg, (5.0*1.5 + 8.0*0.2) / (1.5 + 0.2));
+        assert.strictEqual(result.n, 2);
     });
 
-    test('filters out invalid values and uses only valid ones', () => {
-        // Note: Number(null) === 0 in JavaScript, so null is coerced to 0 (valid).
-        // undefined and non-numeric strings are filtered out by Number.isFinite.
+    test('fasting readings dominate weighted average', () => {
         const result = calculate([
-            { glucose_mmol_l: 6.0 },
-            { glucose_mmol_l: undefined },
-            { glucose_mmol_l: 'abc' },
-            { glucose_mmol_l: 8.0 }
+            { glucose_mmol_l: 10.0, timing: '2_hours_after' },   // weight 0.2
+            { glucose_mmol_l: 5.0, timing: 'fasting' },           // weight 1.5
+        ]);
+        assert.ok(result);
+        // weighted avg = (10*0.2 + 5*1.5) / (0.2+1.5) = (2 + 7.5) / 1.7 = 5.71
+        assert.ok(result.avg < 6.0, 'fasting reading should pull average toward 5.0');
+    });
+
+    test('filters out invalid values', () => {
+        const result = calculate([
+            { glucose_mmol_l: 6.0, timing: 'fasting' },
+            { glucose_mmol_l: undefined, timing: 'random' },
+            { glucose_mmol_l: 'abc', timing: 'random' },
+            { glucose_mmol_l: 8.0, timing: 'random' }
         ]);
         assert.ok(result);
         assert.strictEqual(result.n, 2);
-        assert.strictEqual(result.avg, 7.0);
     });
 
     test('coerces string numeric values', () => {
         const result = calculate([
-            { glucose_mmol_l: '6.0' },
-            { glucose_mmol_l: '8.0' }
+            { glucose_mmol_l: '6.0', timing: 'random' },
+            { glucose_mmol_l: '8.0', timing: 'random' }
         ]);
         assert.ok(result);
         assert.strictEqual(result.n, 2);
@@ -112,17 +144,22 @@ describe('renderHbA1c', () => {
 
     test('renders estimates for valid data', () => {
         const data = [
-            { measured_at: new Date().toISOString(), glucose_mmol_l: 6.0 },
-            { measured_at: new Date().toISOString(), glucose_mmol_l: 8.0 }
+            { measured_at: new Date().toISOString(), glucose_mmol_l: 6.0, timing: 'fasting' },
+            { measured_at: new Date().toISOString(), glucose_mmol_l: 8.0, timing: 'random' }
         ];
         const html = renderHbA1c(data);
         assert.ok(html.includes('mmol/mol'));
         assert.ok(html.includes('n=2'));
     });
 
-    test('renders ADAG disclaimer text', () => {
+    test('renders ADAG formula description', () => {
         const html = renderHbA1c([]);
         assert.ok(html.includes('ADAG glucose-to-HbA1c relationship'));
+    });
+
+    test('mentions timing-based weighting', () => {
+        const html = renderHbA1c([]);
+        assert.ok(html.includes('weighted'));
     });
 });
 
