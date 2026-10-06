@@ -32,7 +32,10 @@
 ## Versioning and release
 
 - Use Semantic Versioning: feature → MINOR, fix → PATCH, breaking change → MAJOR.
+- When a test is completed for bug fices increment MINOR version numbering, for instance 4.1.0 -> 4.1.1
+- When adding new tabs, features this counts as a MAJOR change for isntacne 4.1.0 -> 4.2.0
 - Update `version.js` and `VERSION` for a release, not for documentation-only or refactoring-only edits. Update a changelog if one is maintained, and report the version change.
 - Merge changes into `main` through a Pull Request. Do not delete branches unless explicitly requested.
+
 
 Use concise Conventional Commit messages when a commit is requested, for example `feat: add dashboard`, `fix: correct authentication redirect`, or `docs: clarify setup`.
