@@ -42,3 +42,9 @@ function recordTime(o) {
     }
     return null;
 }
+
+// Convert a form field value to a number, or null if empty.
+// Used by form submit handlers to normalize numeric input.
+function num(v) {
+    return v === '' || v == null ? null : Number(v);
+}

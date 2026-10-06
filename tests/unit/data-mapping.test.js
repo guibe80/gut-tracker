@@ -15,7 +15,7 @@ const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
 
-const { pick, pickArray, recordTime } = sandbox;
+const { pick, pickArray, recordTime, num } = sandbox;
 
 describe('pick', () => {
     test('returns first matching value', () => {
@@ -107,5 +107,34 @@ describe('recordTime', () => {
     test('returns null for invalid date', () => {
         const obj = { date: 'not-a-date' };
         assert.strictEqual(recordTime(obj), null);
+    });
+});
+
+describe('num', () => {
+    test('returns null for empty string', () => {
+        assert.strictEqual(num(''), null);
+    });
+
+    test('returns null for null/undefined', () => {
+        assert.strictEqual(num(null), null);
+        assert.strictEqual(num(undefined), null);
+    });
+
+    test('converts numeric string to number', () => {
+        assert.strictEqual(num('42'), 42);
+        assert.strictEqual(num('3.14'), 3.14);
+    });
+
+    test('converts negative numbers', () => {
+        assert.strictEqual(num('-5'), -5);
+    });
+
+    test('returns 0 for string "0"', () => {
+        assert.strictEqual(num('0'), 0);
+    });
+
+    test('returns NaN is avoided for non-numeric strings', () => {
+        // Non-numeric strings produce NaN — this is the existing behavior
+        assert.ok(Number.isNaN(num('abc')));
     });
 });
