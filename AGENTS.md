@@ -24,6 +24,11 @@
 - Review the final diff and run `git diff --check`. Report the commands run, their results, and any checks not run; never claim unverified success.
 - Summarize the behavior changed and any remaining risks. Do not commit, push, merge, or delete branches unless asked.
 
+## Testing and merging
+
+- **Testing gate**: Before merging any feature, fix, or refactor into `main`, the user must explicitly test and approve it. Do not merge to `main` until the user says "it works" or gives similar approval after testing.
+- Development branches (`feature/`, `fix/`, `refactor/`) can be committed and pushed for the user to review, but merging into `main` requires explicit user approval after they have tested the changes.
+
 ## Versioning and release
 
 - Use Semantic Versioning: feature → MINOR, fix → PATCH, breaking change → MAJOR.
