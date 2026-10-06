@@ -32,7 +32,7 @@ function calculate(rows) {
     return { avg, hba1c: toMmolMol(avg), n: values.length };
 }
 
-// Render the HbA1c trend card from a set of glucose readings.
+// Render the HbA1c trend card HTML from a set of glucose readings.
 function renderHbA1c(data) {
     const now = new Date();
     const periods = [
@@ -80,16 +80,19 @@ function installHbA1cTrend() {
             }
 
             card.innerHTML = renderHbA1c(data || []);
-        } catch (_) {
-            // Keep the tracker usable if the optional trend calculation is unavailable.
+        } catch (e) {
+            console.error('[HbA1c] render error:', e.message);
         }
     };
 
     const waitForApp = () => {
         try {
-            if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof user !== 'undefined' && user) render();
-            else setTimeout(waitForApp, 1000);
-        } catch (_) {
+            if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof user !== 'undefined' && user) {
+                render();
+            } else {
+                setTimeout(waitForApp, 1000);
+            }
+        } catch (e) {
             setTimeout(waitForApp, 1000);
         }
     };
