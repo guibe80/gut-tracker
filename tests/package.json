@@ -1,0 +1,13 @@
+{
+  "name": "gut-tracker-smoke-tests",
+  "version": "1.0.0",
+  "description": "Browser smoke tests for Gut + Glucose Tracker",
+  "private": true,
+  "scripts": {
+    "test": "playwright test --config=playwright.config.js",
+    "test:headed": "playwright test --headed --config=playwright.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
