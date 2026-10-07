@@ -13,8 +13,7 @@
  *   - render()                                                    (ui/render.js)
  *
  * Pure functions (testable without DOM):
- *   calculateWaterTarget(weightKg), parseDrinkVolume(text),
- *   getDateKey(), WATER_ENTRY_SIZES
+ *   calculateWaterTarget(weightKg), parseDrinkVolume(text), getDateKey()
  */
 
 /* ------------------------------------------------------------------ */
@@ -35,9 +34,6 @@ const WATER_ENTRY_STEP_ML = 250;
 
 // Storage key in localStorage
 const WATER_STORAGE_KEY = 'water_intake';
-
-// Water bottle fill colour
-const WATER_COLOR = '#4a90d9';
 
 /* ------------------------------------------------------------------ */
 /* Pure calculation functions                                        */
