@@ -61,6 +61,8 @@ function openEditForm(table, id) {
         // For existing records linked to a meal, auto-fill carbs if empty
         // and mark timing-related fields as auto-derived so the change
         // handlers can recalculate when the user modifies meal or timing.
+        // Date/Time (#gd, #gt) are NOT marked auto-derived — the reading
+        // time is the reference anchor, not derived from the meal.
         if (record.meal_id) {
             const meal = meals.find(m => m.id === record.meal_id);
             if (meal) {
@@ -71,7 +73,7 @@ function openEditForm(table, id) {
                 }
                 if (getTimingOffset(record.timing) !== null) {
                     autoDerivedFields.time = true;
-                    markAutoDerived('gd', 'gt', 'gmin', 'gtime');
+                    markAutoDerived('gtime', 'gmin');
                 }
             }
         }
@@ -130,43 +132,20 @@ function clearAutoDerivedMarkers(...ids) {
 
 /**
  * Auto-populate the glucose form's derived fields from a selected meal.
- * Called when a meal is selected (user action) or during edit.
  *
- * Derives: Date (#gd), Time (#gt), Minutes from meal (#gmin),
- *          and Estimated carbs (#gcg)
+ * Uses the READING TIME (already in the form's Date/Time fields) as the
+ * reference point. Derives the Timing dropdown from the difference
+ * between the reading time and the meal time, and copies the meal's
+ * carbohydrate value into Estimated Carbs.
+ *
+ * Falls back to calculating reading time from meal + default timing when
+ * no reading time is present in the form yet.
  */
-function applyMealTimingToForm(mealId, timing) {
+function applyMealTimingToForm(mealId) {
     const meal = meals.find(m => m.id === mealId);
     if (!meal) return;
 
-    // Determine which timing to use:
-    // - If explicitly passed (from dropdown), use that
-    // - Otherwise, recall stored preference or use default
-    const useTiming = timing || getPreferredTiming(mealId);
-    const mealTimeStr = meal.meal_time;
-    if (!mealTimeStr) return;
-
-    $('gtime').value = useTiming;
-
-    // Calculate Date/Time from meal timestamp + timing offset
-    const offset = getTimingOffset(useTiming);
-    if (offset !== null && offset !== undefined) {
-        try {
-            const calcDate = calculateTime(mealTimeStr, useTiming);
-            if (calcDate) {
-                const parts = splitDateTime(calcDate);
-                $('gd').value = parts.date;
-                $('gt').value = parts.time;
-                $('gmin').value = offset;
-                autoDerivedFields.time = true;
-                markAutoDerived('gd', 'gt', 'gmin', 'gtime');
-            }
-        } catch (e) {
-            // Invalid date — leave manual values in place
-        }
-    }
-
-    // Auto-populate Estimated Carbs from meal
+    // 1. Always populate Estimated Carbs from the meal
     if (meal.estimated_carbohydrate_g != null && !isNaN(Number(meal.estimated_carbohydrate_g))) {
         $('gcg').value = meal.estimated_carbohydrate_g;
         autoDerivedFields.carbs = true;
@@ -175,6 +154,41 @@ function applyMealTimingToForm(mealId, timing) {
         $('gcg').value = '';
         autoDerivedFields.carbs = false;
         clearAutoDerivedMarkers('gcg');
+    }
+
+    if (!meal.meal_time) return;
+
+    const mealDate = new Date(meal.meal_time);
+    if (isNaN(mealDate.getTime())) return;
+
+    // 2. If a reading time is already in the form, derive timing from it
+    const readingDateStr = $('gd').value;
+    const readingTimeStr = $('gt').value;
+
+    if (readingDateStr && readingTimeStr) {
+        const readingDate = new Date(`${readingDateStr}T${readingTimeStr}`);
+        if (!isNaN(readingDate.getTime())) {
+            const diffMinutes = Math.round((readingDate.getTime() - mealDate.getTime()) / 60000);
+            const suggested = suggestTiming(diffMinutes);
+            $('gtime').value = suggested;
+            $('gmin').value = Math.abs(diffMinutes);
+            autoDerivedFields.time = true;
+            markAutoDerived('gtime', 'gmin');
+            return;  // Reading time is the reference — do NOT override it
+        }
+    }
+
+    // 3. Fallback: no reading time in form — calculate from meal + default timing
+    const timing = getPreferredTiming(mealId);
+    const calcDate = calculateTime(meal.meal_time, timing);
+    if (calcDate) {
+        const parts = splitDateTime(calcDate);
+        $('gd').value = parts.date;
+        $('gt').value = parts.time;
+        $('gmin').value = getTimingOffset(timing) ?? '';
+        $('gtime').value = timing;
+        autoDerivedFields.time = true;
+        markAutoDerived('gd', 'gt', 'gmin', 'gtime');
     }
 }
 
@@ -356,7 +370,7 @@ function bindFormHandlers() {
     $('gmeal').addEventListener('change', () => {
         const mealId = $('gmeal').value;
         if (mealId) {
-            applyMealTimingToForm(mealId, getPreferredTiming(mealId));
+            applyMealTimingToForm(mealId);
         } else {
             clearMealTimingFromForm();
         }
@@ -367,29 +381,16 @@ function bindFormHandlers() {
         if (!mealId) return;
 
         const timing = $('gtime').value;
-        const meal = meals.find(m => m.id === mealId);
-        if (!meal || !meal.meal_time) return;
-
         const offset = getTimingOffset(timing);
 
-        // If timing has a meal-derived offset, recalculate Date/Time
-        if (offset !== null && offset !== undefined) {
-            try {
-                const calcDate = calculateTime(meal.meal_time, timing);
-                if (calcDate) {
-                    const parts = splitDateTime(calcDate);
-                    $('gd').value = parts.date;
-                    $('gt').value = parts.time;
-                    $('gmin').value = offset;
-                    autoDerivedFields.time = true;
-                    markAutoDerived('gd', 'gt', 'gmin', 'gtime');
-                }
-            } catch (e) {
-                // Invalid date — leave manual values in place
-            }
+        // Reading time is the reference — do NOT recalculate Date/Time.
+        // If minutes_from_meal was auto-derived (from the meal), update it
+        // to stay consistent with the selected timing.
+        if (autoDerivedFields.time && offset !== null && offset !== undefined) {
+            $('gmin').value = offset;
+            markAutoDerived('gmin', 'gtime');
         }
 
-        // Remember the user's timing preference for this meal (session)
         recordMealTimingPreference(mealId, timing);
     });
 }

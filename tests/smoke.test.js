@@ -23,7 +23,7 @@ test.describe('App loads', () => {
   test('index page has correct title and version', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveTitle(/Gut \+ Glucose Tracker V4\.5\.0/i);
+    await expect(page).toHaveTitle(/Gut \+ Glucose Tracker V4\.5\.1/i);
   });
 
   test('auth screen is visible when not logged in', async ({ page }) => {
@@ -36,7 +36,7 @@ test.describe('App loads', () => {
   test('version is displayed in footer', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('[data-app-version]')).toHaveText(/4\.5\.0/);
+    await expect(page.locator('[data-app-version]')).toHaveText(/4\.5\.1/);
   });
 
   test('setup link is visible on auth screen', async ({ page }) => {
@@ -58,7 +58,7 @@ test.describe('Setup page', () => {
   test('setup page shows version', async ({ page }) => {
     await page.goto('/setup.html');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('[data-app-version]')).toHaveText(/4\.5\.0/);
+    await expect(page.locator('[data-app-version]')).toHaveText(/4\.5\.1/);
   });
 });
 

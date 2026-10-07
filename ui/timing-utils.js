@@ -109,3 +109,32 @@ function applyMealTiming(meal, timing) {
 function clearMealTiming(mealId) {
     delete timingOverrides[mealId];
 }
+
+// Given a difference in minutes between the reading time and the meal
+// time, suggest the closest matching timing value.
+// Positive diff = reading was taken AFTER the meal.
+// Negative diff = reading was taken BEFORE the meal.
+// Returns 'other' if no meal-derived timing is within 30 minutes.
+function suggestTiming(diffMinutes) {
+    const candidates = [
+        { timing: 'before_meal', offset: -30 },
+        { timing: '30_min_after',  offset:  30 },
+        { timing: '1_hour_after',  offset:  60 },
+        { timing: '2_hours_after', offset: 120 },
+        { timing: '3_hours_after', offset: 180 }
+    ];
+
+    let best = candidates[0];
+    let bestDiff = Math.abs(diffMinutes - best.offset);
+
+    for (let i = 1; i < candidates.length; i++) {
+        const diff = Math.abs(diffMinutes - candidates[i].offset);
+        if (diff <= bestDiff) {  // <= so later options win exact ties
+            best = candidates[i];
+            bestDiff = diff;
+        }
+    }
+
+    if (bestDiff > 30) return 'other';
+    return best.timing;
+}

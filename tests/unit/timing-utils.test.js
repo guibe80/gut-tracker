@@ -25,7 +25,8 @@ const {
     clearMealTiming,
     calculateTime,
     splitDateTime,
-    applyMealTiming
+    applyMealTiming,
+    suggestTiming
 } = sandbox;
 
 /* ------------------------------------------------------------------ */
@@ -183,5 +184,64 @@ describe('applyMealTiming', () => {
         const result = applyMealTiming(mealNoCarbs, '30_min_after');
         assert.ok(result);
         assert.strictEqual(result.carbs, '');
+    });
+});
+
+describe('suggestTiming', () => {
+    test('suggests 1_hour_after for 60 min diff', () => {
+        assert.strictEqual(suggestTiming(60), '1_hour_after');
+    });
+
+    test('suggests 2_hours_after for 120 min diff', () => {
+        assert.strictEqual(suggestTiming(120), '2_hours_after');
+    });
+
+    test('suggests 3_hours_after for 180 min diff', () => {
+        assert.strictEqual(suggestTiming(180), '3_hours_after');
+    });
+
+    test('suggests before_meal for -30 min diff', () => {
+        assert.strictEqual(suggestTiming(-30), 'before_meal');
+    });
+
+    test('suggests 30_min_after for 0 min diff (reading at meal time)', () => {
+        assert.strictEqual(suggestTiming(0), '30_min_after');
+    });
+
+    test('suggests 1_hour_after for 45 min diff (closer to 60 than to 30 with tie-break)', () => {
+        // 45 is equidistant from 30 and 60; later option wins
+        assert.strictEqual(suggestTiming(45), '1_hour_after');
+    });
+
+    test('suggests 30_min_after for 20 min diff', () => {
+        assert.strictEqual(suggestTiming(20), '30_min_after');
+    });
+
+    test('suggests before_meal for -15 min diff', () => {
+        assert.strictEqual(suggestTiming(-15), 'before_meal');
+    });
+
+    test('suggests other for very large positive diff', () => {
+        assert.strictEqual(suggestTiming(300), 'other');
+    });
+
+    test('suggests other for very large negative diff', () => {
+        assert.strictEqual(suggestTiming(-120), 'other');
+    });
+
+    test('suggests 3_hours_after for 200 min diff (within 30 min of 180)', () => {
+        assert.strictEqual(suggestTiming(200), '3_hours_after');
+    });
+
+    test('suggests other for diff beyond all timings', () => {
+        assert.strictEqual(suggestTiming(500), 'other');
+        assert.strictEqual(suggestTiming(-300), 'other');
+    });
+
+    test('rounds to nearest minute before comparing', () => {
+        // 62 min rounds to 62 — closest is 1_hour_after (60, diff=2)
+        assert.strictEqual(suggestTiming(62), '1_hour_after');
+        // 57 min — closest is 1_hour_after (60, diff=3) vs 30_min_after (30, diff=27)
+        assert.strictEqual(suggestTiming(57), '1_hour_after');
     });
 });
