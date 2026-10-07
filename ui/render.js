@@ -106,6 +106,7 @@ function render() {
     $('timelineNext').disabled = timelinePage >= timelinePages - 1;
 
     dvRender();
+    renderWaterIntake?.();
 }
 
 /* ------------------------------------------------------------------ */

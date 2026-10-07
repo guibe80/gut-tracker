@@ -282,6 +282,18 @@ function bindFormHandlers() {
                     notes: triggers.length ? 'Triggers: ' + triggers.join(', ') : null
                 });
             }
+            /** Water integration: add water entries from drink meals */
+            if (meal.id) {
+                if (normalizedMealType === 'drink') {
+                    const added = addWaterFromMeal?.(meal.id, foods);
+                    if (added) {
+                        const msg = `Added ${added} ml water from drink meal.`;
+                        setMsg('fs', msg, 'ok');
+                    }
+                } else {
+                    removeWaterFromMeal?.(meal.id);
+                }
+            }
             $('foodForm').reset();
             reset();
             setMsg('fs', 'Meal saved to cloud.', 'ok');

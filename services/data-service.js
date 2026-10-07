@@ -192,6 +192,7 @@ async function deleteEntry(table, id) {
         if (table === 'meals') {
             const foodResult = await supabaseClient.from('meal_foods').delete().eq('meal_id', id);
             if (foodResult.error) throw foodResult.error;
+            removeWaterFromMeal?.(id);
         }
         let request = supabaseClient.from(table).delete().eq('id', id);
         if (table !== 'meal_foods') request = request.eq('user_id', user.id);
