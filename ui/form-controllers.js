@@ -57,6 +57,24 @@ function openEditForm(table, id) {
         $('gmin').value = record.minutes_from_meal ?? '';
         $('gcg').value = record.estimated_meal_carbs_g ?? '';
         $('gn').value = record.notes || '';
+
+        // For existing records linked to a meal, auto-fill carbs if empty
+        // and mark timing-related fields as auto-derived so the change
+        // handlers can recalculate when the user modifies meal or timing.
+        if (record.meal_id) {
+            const meal = meals.find(m => m.id === record.meal_id);
+            if (meal) {
+                if (record.estimated_meal_carbs_g == null && meal.estimated_carbohydrate_g != null) {
+                    $('gcg').value = meal.estimated_carbohydrate_g;
+                    autoDerivedFields.carbs = true;
+                    markAutoDerived('gcg');
+                }
+                if (getTimingOffset(record.timing) !== null) {
+                    autoDerivedFields.time = true;
+                    markAutoDerived('gd', 'gt', 'gmin', 'gtime');
+                }
+            }
+        }
     }
     if (table === 'gut_symptoms') {
         $('sd').value = fields.date;
@@ -84,6 +102,139 @@ function openEditForm(table, id) {
         $('wn').value = record.notes || '';
     }
     document.getElementById(tab + 'Form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ------------------------------------------------------------------ */
+/* Meal timing auto-population (glucose form)                          */
+/* ------------------------------------------------------------------ */
+
+// Tracks which glucose form fields were auto-derived from a meal.
+// This lets us distinguish "auto-filled" from "manually entered".
+const autoDerivedFields = { time: false, carbs: false };
+
+// Mark a set of form elements as auto-derived (adds visual indicator).
+function markAutoDerived(...ids) {
+    ids.forEach(id => {
+        const el = $(id);
+        if (el) el.classList.add('auto-derived');
+    });
+}
+
+// Remove auto-derived markers.
+function clearAutoDerivedMarkers(...ids) {
+    ids.forEach(id => {
+        const el = $(id);
+        if (el) el.classList.remove('auto-derived');
+    });
+}
+
+/**
+ * Auto-populate the glucose form's derived fields from a selected meal.
+ * Called when a meal is selected (user action) or during edit.
+ *
+ * Derives: Date (#gd), Time (#gt), Minutes from meal (#gmin),
+ *          and Estimated carbs (#gcg)
+ */
+function applyMealTimingToForm(mealId, timing) {
+    const meal = meals.find(m => m.id === mealId);
+    if (!meal) return;
+
+    // Determine which timing to use:
+    // - If explicitly passed (from dropdown), use that
+    // - Otherwise, recall stored preference or use default
+    const useTiming = timing || getPreferredTiming(mealId);
+    const mealTimeStr = meal.meal_time;
+    if (!mealTimeStr) return;
+
+    $('gtime').value = useTiming;
+
+    // Calculate Date/Time from meal timestamp + timing offset
+    const offset = getTimingOffset(useTiming);
+    if (offset !== null && offset !== undefined) {
+        try {
+            const calcDate = calculateTime(mealTimeStr, useTiming);
+            if (calcDate) {
+                const parts = splitDateTime(calcDate);
+                $('gd').value = parts.date;
+                $('gt').value = parts.time;
+                $('gmin').value = offset;
+                autoDerivedFields.time = true;
+                markAutoDerived('gd', 'gt', 'gmin', 'gtime');
+            }
+        } catch (e) {
+            // Invalid date — leave manual values in place
+        }
+    }
+
+    // Auto-populate Estimated Carbs from meal
+    if (meal.estimated_carbohydrate_g != null && !isNaN(Number(meal.estimated_carbohydrate_g))) {
+        $('gcg').value = meal.estimated_carbohydrate_g;
+        autoDerivedFields.carbs = true;
+        markAutoDerived('gcg');
+    } else {
+        $('gcg').value = '';
+        autoDerivedFields.carbs = false;
+        clearAutoDerivedMarkers('gcg');
+    }
+}
+
+/**
+ * Clear all auto-derived state when the related meal is removed.
+ * Resets timing to 'random' (the default for no meal).
+ * If Date/Time were auto-derived, resets them to the current time
+ * (they are required fields, so an empty state is invalid).
+ * If Carbs were auto-derived, clears them.
+ * Manually-entered values are preserved.
+ */
+function clearMealTimingFromForm() {
+    const wasAutoTime = autoDerivedFields.time;
+    const wasAutoCarbs = autoDerivedFields.carbs;
+
+    autoDerivedFields.time = false;
+    autoDerivedFields.carbs = false;
+    clearAutoDerivedMarkers('gd', 'gt', 'gmin', 'gtime', 'gcg');
+
+    // Reset timing only if it was a meal-derived timing
+    if (getTimingOffset($('gtime').value) !== null) {
+        $('gtime').value = 'random';
+    }
+
+    // Reset Date/Time to now if they were auto-derived (required fields)
+    if (wasAutoTime) {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        $('gd').value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        $('gt').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+
+    // Clear auto-populated carbs only if they were auto-derived
+    if (wasAutoCarbs) {
+        $('gcg').value = '';
+    }
+}
+
+// Store a user's timing preference for a meal (session-local).
+// Called when the user manually changes the Timing dropdown
+// after a meal has been selected.
+function recordMealTimingPreference(mealId, timing) {
+    if (!mealId) return;
+    const offset = getTimingOffset(timing);
+    if (offset !== null && offset !== undefined) {
+        setPreferredTiming(mealId, timing);
+    } else {
+        // Clear preference for non-meal timings
+        clearMealTiming(mealId);
+    }
+}
+
+/**
+ * Reset all auto-derived state (called after form save or form clear).
+ * Removes CSS markers and resets flags so stale indicators don't persist.
+ */
+function resetMealTimingState() {
+    autoDerivedFields.time = false;
+    autoDerivedFields.carbs = false;
+    clearAutoDerivedMarkers('gd', 'gt', 'gmin', 'gtime', 'gcg');
 }
 
 /* ------------------------------------------------------------------ */
@@ -142,6 +293,7 @@ function bindFormHandlers() {
             }, 'gs');
             $('glucoseForm').reset();
             reset();
+            resetMealTimingState();
         } catch (err) {
             setMsg('gs', err.message, 'err');
         }
@@ -199,6 +351,47 @@ function bindFormHandlers() {
             setMsg('ws', err.message, 'err');
         }
     });
+
+    // --- Meal timing auto-population (glucose form) ---
+    $('gmeal').addEventListener('change', () => {
+        const mealId = $('gmeal').value;
+        if (mealId) {
+            applyMealTimingToForm(mealId, getPreferredTiming(mealId));
+        } else {
+            clearMealTimingFromForm();
+        }
+    });
+
+    $('gtime').addEventListener('change', () => {
+        const mealId = $('gmeal').value;
+        if (!mealId) return;
+
+        const timing = $('gtime').value;
+        const meal = meals.find(m => m.id === mealId);
+        if (!meal || !meal.meal_time) return;
+
+        const offset = getTimingOffset(timing);
+
+        // If timing has a meal-derived offset, recalculate Date/Time
+        if (offset !== null && offset !== undefined) {
+            try {
+                const calcDate = calculateTime(meal.meal_time, timing);
+                if (calcDate) {
+                    const parts = splitDateTime(calcDate);
+                    $('gd').value = parts.date;
+                    $('gt').value = parts.time;
+                    $('gmin').value = offset;
+                    autoDerivedFields.time = true;
+                    markAutoDerived('gd', 'gt', 'gmin', 'gtime');
+                }
+            } catch (e) {
+                // Invalid date — leave manual values in place
+            }
+        }
+
+        // Remember the user's timing preference for this meal (session)
+        recordMealTimingPreference(mealId, timing);
+    });
 }
 
 /* ------------------------------------------------------------------ */
@@ -208,7 +401,7 @@ function bindFormHandlers() {
 function bindEventHandlers() {
     // Form clear buttons
     for (const [id, form] of [['fclear', 'foodForm'], ['gclear', 'glucoseForm'], ['sclear', 'symForm'], ['bclear', 'bowelForm'], ['wclear', 'weightForm']]) {
-        $(id).onclick = () => { editState = null; setFormMode(form, false); $(form).reset(); reset() };
+        $(id).onclick = () => { editState = null; setFormMode(form, false); $(form).reset(); reset(); if (id === 'gclear') resetMealTimingState() };
     }
 
     // Tab switching

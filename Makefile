@@ -23,6 +23,8 @@ check-js:
 	@node --check version.js
 	@node --check sw.js
 	@ls utils/*.js 2>/dev/null | xargs -r node --check
+	@ls ui/*.js 2>/dev/null | xargs -r node --check
+	@ls services/*.js 2>/dev/null | xargs -r node --check
 	@echo "JavaScript syntax OK."
 
 check-html:

@@ -55,6 +55,15 @@ gut-tracker/
 ├── icon-192.png            # PWA icon (192px)
 ├── icon-512.png            # PWA icon (512px)
 ├── VERSION                 # Version string (3.5.0)
+├── services/
+│   ├── data-service.js     # Supabase data loading/pagination
+│   └── v2-import.js        # V2 JSON backup import
+├── ui/
+│   ├── dayview-renderer.js # Day view timeline rendering
+│   ├── render.js           # List/tab rendering + data loading (v3)
+│   ├── timing-utils.js     # Glucose timing offset calculations + meal auto-fill
+│   ├── form-controllers.js # Form state, submit handlers, event wiring
+│   └── hba1c-trend.js     # HbA1c trend estimation (timing-weighted)
 ├── .env                    # Local environment (gitignored, not committed)
 ├── .gitignore
 ├── .vscode/
@@ -73,7 +82,8 @@ gut-tracker/
 │       ├── html.test.js             # Unit tests for HTML escaping
 │       ├── supabase-helpers.test.js # Unit tests for Supabase helpers
 │       ├── validation.test.js       # Unit tests for validation helpers
-│       └── data-mapping.test.js     # Unit tests for V2 data mapping
+│       ├── data-mapping.test.js     # Unit tests for V2 data mapping
+│       └── timing-utils.test.js     # Unit tests for timing/offset logic
 ├── Makefile                # Repeatable syntax checks + dev server
 ├── AGENTS.md               # Agent workflow: git, release, safety rules
 ├── AI_CONTEXT.md           # Architecture, data rules, project checks

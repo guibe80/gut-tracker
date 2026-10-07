@@ -350,6 +350,16 @@
             min-height: 78px
         }
 
+        .auto-derived {
+            background: #fffbeb;
+            border-color: var(--g);
+        }
+
+        .auto-derived + .muted {
+            display: inline-block;
+            margin-top: 4px;
+        }
+
         .checks {
             display: grid;
             grid-template-columns: 1fr 1fr;
