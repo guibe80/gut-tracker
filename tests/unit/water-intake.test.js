@@ -9,8 +9,8 @@ const vm = require('vm');
 // Load water-intake.js + datetime.js (dependencies) in a vm sandbox.
 // datetime.js provides: dvFormatDate
 // water-intake.js provides: calculateWaterTarget, parseDrinkVolume, getDateKey,
-//   getWaterStorage, saveWaterStorage, getWaterEntries, getWaterTotal,
-//   addWaterEntry, removeWaterEntry, addWaterFromMeal, removeWaterFromMeal
+//   getWaterEntries, getWaterTotal, addWaterEntry, removeWaterEntry,
+//   addWaterFromMeal, removeWaterFromMeal, WATER_ENTRY_STEP_ML
 
 const datetimeCode = fs.readFileSync(
     path.resolve(__dirname, '../../utils/datetime.js'),
@@ -22,14 +22,53 @@ const waterCode = fs.readFileSync(
     'utf8'
 );
 
+/* ------------------------------------------------------------------ */
+/* Mock Supabase client for unit tests                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Creates a lightweight mock that emulates the Supabase JS client
+ * patterns used by water-intake.js.  Tracks delete conditions on the
+ * chain so `await delete().eq(a,1).eq(b,2)` works correctly.
+ */
+function createMockSupabase() {
+    return {
+        from: () => ({
+            select: () => ({
+                order: () => Promise.resolve({ data: [], error: null })
+            }),
+            insert: (record) => ({
+                select: () => {
+                    const entry = {
+                        id: 'test-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                        ...record,
+                        created_at: new Date().toISOString()
+                    };
+                    return Promise.resolve({ data: [entry], error: null });
+                }
+            }),
+            delete: () => {
+                const conditions = [];
+                const chain = {
+                    eq: (col, val) => { conditions.push([col, val]); return chain; },
+                    then: (resolve) => {
+                        Promise.resolve({ error: null }).then(resolve);
+                    }
+                };
+                return chain;
+            }
+        })
+    };
+}
+
 const sandbox = {
-    localStorage: {
-        _store: {},
-        getItem(key) { return this._store[key] || null },
-        setItem(key, val) { this._store[key] = val },
-        removeItem(key) { delete this._store[key] }
-    },
-    _clearStorage() { this.localStorage._store = {} }
+    waterIntake: [],
+    user: { id: 'test-user' },
+    supabaseClient: null,
+    _resetStorage() {
+        this.waterIntake = [];
+        this.supabaseClient = createMockSupabase();
+    }
 };
 vm.createContext(sandbox);
 vm.runInContext(datetimeCode, sandbox);
@@ -39,15 +78,12 @@ const {
     calculateWaterTarget,
     parseDrinkVolume,
     getDateKey,
-    getWaterStorage,
-    saveWaterStorage,
     getWaterEntries,
     getWaterTotal,
     addWaterEntry,
     removeWaterEntry,
     addWaterFromMeal,
     removeWaterFromMeal,
-    DEFAULT_WATER_TARGET_ML,
     WATER_ENTRY_STEP_ML
 } = sandbox;
 
@@ -149,89 +185,98 @@ describe('getDateKey', () => {
     });
 });
 
-describe('Water entry storage', () => {
-    beforeEach(() => sandbox._clearStorage());
+describe('Water entry storage (Supabase-backed)', () => {
+    beforeEach(() => sandbox._resetStorage());
 
     test('starts empty', () => {
-        const data = getWaterStorage();
-        assert.strictEqual(Object.keys(data).length, 0);
+        assert.strictEqual(getWaterEntries('2025-06-15').length, 0);
+        assert.strictEqual(getWaterTotal('2025-06-15'), 0);
     });
 
-    test('addWaterEntry stores entry by date key', () => {
-        addWaterEntry('2025-06-15', 250, 'manual');
+    test('addWaterEntry stores entry accessible via date key', async () => {
+        await addWaterEntry('2025-06-15', 250, 'manual');
         const entries = getWaterEntries('2025-06-15');
         assert.strictEqual(entries.length, 1);
-        assert.strictEqual(entries[0].amountMl, 250);
+        assert.strictEqual(entries[0].amount_ml, 250);
         assert.strictEqual(entries[0].source, 'manual');
     });
 
-    test('getWaterTotal sums all entries', () => {
-        addWaterEntry('2025-06-15', 250, 'manual');
-        addWaterEntry('2025-06-15', 250, 'manual');
+    test('getWaterTotal sums all entries', async () => {
+        await addWaterEntry('2025-06-15', 250, 'manual');
+        await addWaterEntry('2025-06-15', 250, 'manual');
         assert.strictEqual(getWaterTotal('2025-06-15'), 500);
     });
 
-    test('entries from different dates are separate', () => {
-        addWaterEntry('2025-06-15', 250, 'manual');
-        addWaterEntry('2025-06-16', 250, 'manual');
+    test('entries from different dates are separate', async () => {
+        await addWaterEntry('2025-06-15', 250, 'manual');
+        await addWaterEntry('2025-06-16', 250, 'manual');
         assert.strictEqual(getWaterTotal('2025-06-15'), 250);
         assert.strictEqual(getWaterTotal('2025-06-16'), 250);
     });
 
-    test('removeWaterEntry deletes by ID', () => {
-        const entry = addWaterEntry('2025-06-15', 250, 'manual');
+    test('removeWaterEntry deletes by ID', async () => {
+        const entry = await addWaterEntry('2025-06-15', 250, 'manual');
         assert.strictEqual(getWaterTotal('2025-06-15'), 250);
-        removeWaterEntry('2025-06-15', entry.id);
+        await removeWaterEntry(entry.id);
         assert.strictEqual(getWaterTotal('2025-06-15'), 0);
     });
 
-    test('manual and meal entries both count', () => {
-        addWaterEntry('2025-06-15', 250, 'manual');
-        addWaterEntry('2025-06-15', 500, 'meal', 'meal-abc-123');
+    test('manual and meal entries both count', async () => {
+        await addWaterEntry('2025-06-15', 250, 'manual');
+        await addWaterEntry('2025-06-15', 500, 'meal', 'meal-abc-123');
         assert.strictEqual(getWaterTotal('2025-06-15'), 750);
     });
 
-    test('updating a meal entry replaces, does not duplicate', () => {
-        addWaterEntry('2025-06-15', 250, 'meal', 'meal-abc');
-        addWaterEntry('2025-06-15', 500, 'meal', 'meal-abc');
+    test('updating a meal entry replaces, does not duplicate', async () => {
+        await addWaterEntry('2025-06-15', 250, 'meal', 'meal-abc');
+        await addWaterEntry('2025-06-15', 500, 'meal', 'meal-abc');
         assert.strictEqual(getWaterTotal('2025-06-15'), 500);  // should be 500, not 750
     });
 
-    test('removeWaterFromMeal removes all entries for a meal', () => {
-        addWaterEntry('2025-06-15', 250, 'meal', 'meal-xyz');
-        addWaterEntry('2025-06-15', 250, 'manual');
-        addWaterEntry('2025-06-16', 500, 'meal', 'meal-xyz');
-        removeWaterFromMeal('meal-xyz');
+    test('removeWaterFromMeal removes all entries for a meal', async () => {
+        await addWaterEntry('2025-06-15', 250, 'meal', 'meal-xyz');
+        await addWaterEntry('2025-06-15', 250, 'manual');
+        await addWaterEntry('2025-06-16', 500, 'meal', 'meal-xyz');
+        await removeWaterFromMeal('meal-xyz');
         assert.strictEqual(getWaterTotal('2025-06-15'), 250);  // only manual remains
         assert.strictEqual(getWaterTotal('2025-06-16'), 0);
     });
 });
 
 describe('addWaterFromMeal', () => {
-    beforeEach(() => sandbox._clearStorage());
+    beforeEach(() => sandbox._resetStorage());
 
-    test('adds water entry when foods contain water volume', () => {
-        const result = addWaterFromMeal('meal-1', '250ml water, juice');
+    test('adds water entry when foods contain water volume', async () => {
+        const result = await addWaterFromMeal('meal-1', '250ml water, juice');
         assert.strictEqual(result, 250);
         const entries = getWaterEntries(getDateKey(new Date()));
-        const mealEntry = entries.find(e => e.source === 'meal' && e.mealId === 'meal-1');
+        const mealEntry = entries.find(e => e.source === 'meal' && e.meal_id === 'meal-1');
         assert.ok(mealEntry);
-        assert.strictEqual(mealEntry.amountMl, 250);
+        assert.strictEqual(mealEntry.amount_ml, 250);
     });
 
-    test('returns null when no water in foods', () => {
-        const result = addWaterFromMeal('meal-2', '500ml juice only');
+    test('returns null when no water in foods', async () => {
+        const result = await addWaterFromMeal('meal-2', '500ml juice only');
         assert.strictEqual(result, null);
     });
 
-    test('returns null for empty foods', () => {
-        const result = addWaterFromMeal('meal-3', '');
+    test('returns null for empty foods', async () => {
+        const result = await addWaterFromMeal('meal-3', '');
         assert.strictEqual(result, null);
     });
 
-    test('parses various volume formats', () => {
-        assert.strictEqual(addWaterFromMeal('m1', '500ml water'), 500);
-        assert.strictEqual(addWaterFromMeal('m2', '1l water'), 1000);
-        assert.strictEqual(addWaterFromMeal('m3', 'water 250ml'), 250);
+    test('parses various volume formats', async () => {
+        assert.strictEqual(await addWaterFromMeal('m1', '500ml water'), 500);
+        assert.strictEqual(await addWaterFromMeal('m2', '1l water'), 1000);
+        assert.strictEqual(await addWaterFromMeal('m3', 'water 250ml'), 250);
+    });
+
+    test('uses consumedAt timestamp when provided', async () => {
+        const consumed = new Date(2025, 5, 15, 12, 30);
+        const result = await addWaterFromMeal('meal-4', '250ml water', consumed.toISOString());
+        assert.strictEqual(result, 250);
+        const entries = getWaterEntries('2025-06-15');
+        const mealEntry = entries.find(e => e.source === 'meal' && e.meal_id === 'meal-4');
+        assert.ok(mealEntry);
     });
 });

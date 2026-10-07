@@ -4,15 +4,15 @@
  * Water intake tracking: daily progress toward a personalised target,
  * visualised as an animated water bottle.
  *
- * Phase 1: All water entries are stored in localStorage (date-keyed).
- * Meal/drink integration adds entries when a drink meal is saved.
+ * Phase 2: Backed by Supabase water_intake table (individual entries
+ * with source attribution: manual vs meal).
  *
  * Depends on globals from utils/ and index.html (loaded via <script>):
- *   - $, dvFormatDate, dvParseDate, dvDayStart, dvDayEnd, esc, fmt  (utils)
- *   - meals, weights, user, supabaseClient                        (index.html)
- *   - render()                                                    (ui/render.js)
+ *   - $, dvFormatDate, dvParseDate, esc, fmt  (utils)
+ *   - waterIntake, weights, user, supabaseClient  (index.html)
+ *   - render()  (ui/render.js)
  *
- * Pure functions (testable without DOM):
+ * Pure functions (testable without DOM/Supabase):
  *   calculateWaterTarget(weightKg), parseDrinkVolume(text), getDateKey()
  */
 
@@ -31,9 +31,6 @@ const WATER_ML_PER_KG = 30;
 
 // Step size for the + button
 const WATER_ENTRY_STEP_ML = 250;
-
-// Storage key in localStorage
-const WATER_STORAGE_KEY = 'water_intake';
 
 /* ------------------------------------------------------------------ */
 /* Pure calculation functions                                        */
@@ -109,80 +106,88 @@ function getDateKey(date) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Storage (localStorage)                                              */
+/* Data access (Supabase)                                              */
 /* ------------------------------------------------------------------ */
 
 /**
- * Read all water data from localStorage.
- * Returns a date-keyed object: { "2025-06-15": [{ id, amountMl, source, ... }], ... }
- */
-function getWaterStorage() {
-    try {
-        const raw = localStorage.getItem(WATER_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : {};
-    } catch {
-        return {};
-    }
-}
-
-/**
- * Persist water data to localStorage.
- */
-function saveWaterStorage(data) {
-    try {
-        localStorage.setItem(WATER_STORAGE_KEY, JSON.stringify(data));
-    } catch {
-        // Storage full or disabled — silently fail
-    }
-}
-
-/**
- * Get all water entries for a given date key.
+ * Get all water entries for a given date key (local date).
+ * Filters from the global waterIntake array loaded by loadWaterEntries().
  */
 function getWaterEntries(dateKey) {
-    const data = getWaterStorage();
-    return data[dateKey] || [];
+    const entries = (typeof waterIntake !== 'undefined' && waterIntake) || [];
+    return entries.filter(e => dvFormatDate(new Date(e.consumed_at)) === dateKey);
 }
 
 /**
- * Sum all water entries for a given date key.
+ * Sum all water entries for a given date key (in ml).
  */
 function getWaterTotal(dateKey) {
-    return getWaterEntries(dateKey).reduce((sum, e) => sum + e.amountMl, 0);
+    return getWaterEntries(dateKey).reduce((sum, e) => sum + Number(e.amount_ml), 0);
 }
 
 /**
- * Add a water entry for a given date.
- * Returns the created entry.
+ * Add a water entry to Supabase and the global array.
+ *
+ * Deduplication: if source === 'meal' and a mealId is provided,
+ * any existing entry for that meal is removed first.
+ *
+ * @param {string} dateKey   - YYYY-MM-DD date string
+ * @param {number} amountMl  - Volume in ml
+ * @param {string} source    - 'manual' or 'meal'
+ * @param {string} [mealId]  - Meal UUID (for meal-sourced entries)
+ * @param {string} [consumedAt] - ISO timestamp (defaults to now)
+ * @returns {Promise<object|null>} The created entry or null on failure
  */
-function addWaterEntry(dateKey, amountMl, source, mealId) {
-    const data = getWaterStorage();
-    const entry = {
-        id: source === 'meal' && mealId ? 'meal_' + mealId : Date.now().toString(),
-        amountMl: Math.round(amountMl),
-        source: source || 'manual',
-        createdAt: new Date().toISOString()
-    };
-    if (mealId) entry.mealId = mealId;
-    if (!data[dateKey]) data[dateKey] = [];
-    // If a meal-sourced entry already exists for this meal, update it
+async function addWaterEntry(dateKey, amountMl, source, mealId, consumedAt) {
+    if (!user || !supabaseClient) return null;
+
+    // Deduplicate: remove existing meal-sourced entry for this meal
     if (source === 'meal' && mealId) {
-        data[dateKey] = data[dateKey].filter(e => !(e.source === 'meal' && e.mealId === mealId));
+        await supabaseClient.from('water_intake')
+            .delete()
+            .eq('meal_id', mealId)
+            .eq('source', 'meal');
+        // Optimistically update global array (mock-safe)
+        waterIntake = waterIntake.filter(e =>
+            !(e.source === 'meal' && e.meal_id === mealId)
+        );
     }
-    data[dateKey].push(entry);
-    saveWaterStorage(data);
-    return entry;
+
+    const record = {
+        user_id: user.id,
+        amount_ml: Math.round(amountMl),
+        source: source || 'manual',
+        consumed_at: consumedAt || (dateKey + 'T12:00:00')
+    };
+    if (mealId) record.meal_id = mealId;
+
+    const { data, error } = await supabaseClient
+        .from('water_intake')
+        .insert(record)
+        .select();
+    if (error) throw error;
+
+    // Optimistically update global array
+    if (data && data[0]) {
+        waterIntake.unshift(data[0]);
+    }
+    return data?.[0] || null;
 }
 
 /**
- * Remove a water entry by ID.
+ * Remove a water entry by ID from Supabase and the global array.
  */
-function removeWaterEntry(dateKey, entryId) {
-    const data = getWaterStorage();
-    if (!data[dateKey]) return;
-    data[dateKey] = data[dateKey].filter(e => e.id !== entryId);
-    if (data[dateKey].length === 0) delete data[dateKey];
-    saveWaterStorage(data);
+async function removeWaterEntry(entryId) {
+    if (!entryId || !supabaseClient) return;
+
+    const { error } = await supabaseClient
+        .from('water_intake')
+        .delete()
+        .eq('id', entryId);
+    if (error) throw error;
+
+    // Update global array
+    waterIntake = waterIntake.filter(e => e.id !== entryId);
 }
 
 /* ------------------------------------------------------------------ */
@@ -235,7 +240,7 @@ function renderWaterIntake() {
     // Update date input
     if (dateInput) dateInput.value = waterState.date;
 
-    // Update bottle fill
+    // Update bottle fill (CSS variable drives animated height)
     fill.style.setProperty('--water-fill-pct', fillPct + '%');
 
     // Update text
@@ -245,22 +250,24 @@ function renderWaterIntake() {
     targetLEl.textContent = (target / 1000).toFixed(1);
 
     // Render entries list
-    const sorted = [...entries].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const sorted = [...entries].sort(
+        (a, b) => new Date(b.consumed_at) - new Date(a.consumed_at)
+    );
     entriesEl.innerHTML = sorted.length
         ? sorted.map(e => waterEntryHtml(e, waterState.date)).join('')
-        : '<p class="muted">No water recorded today.</p>';
+        : '<p class="muted">No water recorded yet.</p>';
 }
 
 /**
  * Build a single water entry row (reuses .entry pattern from render.js).
  */
-function waterEntryHtml(entry, dateKey) {
-    const time = fmt(entry.createdAt);
+function waterEntryHtml(entry) {
+    const time = fmt(entry.consumed_at);
     const source = entry.source === 'meal' ? 'from meal' : 'manual';
     return `<div class="entry">
-        <strong>${entry.amountMl} ml</strong> · <span class="muted">${time}</span> · <span class="muted">${source}</span>
+        <strong>${entry.amount_ml} ml</strong> · <span class="muted">${time}</span> · <span class="muted">${source}</span>
         <div class="entry-actions">
-            <button type="button" class="entry-delete" data-water-date="${esc(dateKey)}" data-water-id="${esc(entry.id)}">Delete</button>
+            <button type="button" class="entry-delete" data-water-id="${esc(entry.id)}">Delete</button>
         </div>
     </div>`;
 }
@@ -285,26 +292,25 @@ function initWaterIntake() {
 
     // Add water buttons
     if ($('waterAdd250')) {
-        $('waterAdd250').addEventListener('click', () => {
-            addWaterEntry(waterState.date, WATER_ENTRY_STEP_ML, 'manual');
+        $('waterAdd250').addEventListener('click', async () => {
+            await addWaterEntry(waterState.date, WATER_ENTRY_STEP_ML, 'manual');
             renderWaterIntake();
         });
     }
     if ($('waterAdd500')) {
-        $('waterAdd500').addEventListener('click', () => {
-            addWaterEntry(waterState.date, WATER_ENTRY_STEP_ML * 2, 'manual');
+        $('waterAdd500').addEventListener('click', async () => {
+            await addWaterEntry(waterState.date, WATER_ENTRY_STEP_ML * 2, 'manual');
             renderWaterIntake();
         });
     }
 
     // Delete water entry (event delegation)
     if ($('waterEntries')) {
-        $('waterEntries').addEventListener('click', event => {
+        $('waterEntries').addEventListener('click', async event => {
             const btn = event.target.closest('.entry-delete');
             if (!btn) return;
-            const date = btn.dataset.waterDate;
             const id = btn.dataset.waterId;
-            removeWaterEntry(date, id);
+            await removeWaterEntry(id);
             renderWaterIntake();
         });
     }
@@ -335,38 +341,39 @@ function waterToday() {
 
 /**
  * After a drink meal is saved, parse the food names for water volume
- * and add a corresponding water entry.
+ * and add a corresponding water entry to Supabase.
  *
- * Called from the food form submit handler.
+ * Called from the food form submit handler in form-controllers.js.
  * Must run AFTER the meal is saved (so we have the meal ID).
  *
- * @param {string} mealId - The saved meal's ID
- * @param {string} foodsText - The raw foods textarea value
+ * @param {string} mealId     - The saved meal's ID (UUID)
+ * @param {string} foodsText  - The raw foods textarea value
+ * @param {string} [consumedAt] - ISO timestamp (defaults to now)
+ * @returns {Promise<number|null>} Volume in ml, or null if no water found
  */
-function addWaterFromMeal(mealId, foodsText) {
+async function addWaterFromMeal(mealId, foodsText, consumedAt) {
     if (!mealId) return null;
     const volume = parseDrinkVolume(foodsText);
     if (!volume || volume <= 0) return null;
-    const dateKey = getDateKey();
-    addWaterEntry(dateKey, volume, 'meal', mealId);
+    const dateKey = consumedAt ? getDateKey(new Date(consumedAt)) : getDateKey();
+    await addWaterEntry(dateKey, volume, 'meal', mealId, consumedAt);
     return volume;
 }
 
 /**
  * Remove water entries associated with a specific meal ID.
- * Called when a meal is deleted.
+ * Called when a meal is deleted or changed from 'drink' to another type.
  */
-function removeWaterFromMeal(mealId) {
+async function removeWaterFromMeal(mealId) {
     if (!mealId) return;
-    const data = getWaterStorage();
-    let changed = false;
-    for (const dateKey of Object.keys(data)) {
-        const before = data[dateKey].length;
-        data[dateKey] = data[dateKey].filter(e => !(e.source === 'meal' && e.mealId === mealId));
-        if (data[dateKey].length !== before) {
-            changed = true;
-            if (data[dateKey].length === 0) delete data[dateKey];
-        }
-    }
-    if (changed) saveWaterStorage(data);
+    if (!supabaseClient) return;
+
+    const { error } = await supabaseClient
+        .from('water_intake')
+        .delete()
+        .eq('meal_id', mealId);
+    if (error) throw error;
+
+    // Update global array
+    waterIntake = waterIntake.filter(e => !(e.source === 'meal' && e.meal_id === mealId));
 }

@@ -56,6 +56,24 @@ async function loadWeights() {
             totals.weights = 0;
             return [];
         }
+    throw error;
+    }
+}
+
+async function loadWaterEntries() {
+    try {
+        if (!supabaseClient) { setSync('error', 'Supabase client not configured'); return []; }
+        const { data, error } = await supabaseClient
+            .from('water_intake')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('consumed_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        if (/water_intake.*(does not exist|schema cache)|relation .*water_intake.*does not exist/i.test(error.message || '')) {
+            return [];
+        }
         throw error;
     }
 }
@@ -72,7 +90,8 @@ async function load() {
             loadGlucose(),
             loadPage('gut_symptoms', 'occurred_at', 'symptoms'),
             loadPage('bowel_movements', 'occurred_at', 'bowels'),
-            loadWeights()
+            loadWeights(),
+            loadWaterEntries()
         ]);
         for (const name of Object.keys(pageSize))
             page[name] = Math.min(page[name], Math.max(0, Math.ceil(totals[name] / pageSize[name]) - 1));
@@ -86,6 +105,7 @@ async function load() {
         symptoms = s;
         bowels = b;
         weights = w;
+        waterIntake = wi || [];
         mealFoods = mf.data || [];
         render();
         setSync('connected');
@@ -192,7 +212,7 @@ async function deleteEntry(table, id) {
         if (table === 'meals') {
             const foodResult = await supabaseClient.from('meal_foods').delete().eq('meal_id', id);
             if (foodResult.error) throw foodResult.error;
-            removeWaterFromMeal?.(id);
+            await removeWaterFromMeal?.(id);
         }
         let request = supabaseClient.from(table).delete().eq('id', id);
         if (table !== 'meal_foods') request = request.eq('user_id', user.id);

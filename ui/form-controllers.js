@@ -285,13 +285,12 @@ function bindFormHandlers() {
             /** Water integration: add water entries from drink meals */
             if (meal.id) {
                 if (normalizedMealType === 'drink') {
-                    const added = addWaterFromMeal?.(meal.id, foods);
+                    const added = await addWaterFromMeal?.(meal.id, foods, meal.meal_time);
                     if (added) {
-                        const msg = `Added ${added} ml water from drink meal.`;
-                        setMsg('fs', msg, 'ok');
+                        setMsg('fs', `Added ${added} ml water from drink meal.`, 'ok');
                     }
                 } else {
-                    removeWaterFromMeal?.(meal.id);
+                    await removeWaterFromMeal?.(meal.id);
                 }
             }
             $('foodForm').reset();
