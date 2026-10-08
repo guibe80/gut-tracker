@@ -35,12 +35,13 @@
  * arrays. This is the pure logic extracted from render() so it can be
  * unit-tested independently of the DOM.
  *
- * @param {object} data - { meals, glucose, symptoms, bowels, weights, mealFoods }
+ * @param {object} data - { meals, glucose, symptoms, bowels, weights, mealFoods, waterIntake }
  * @param {string} filter - timeline filter type ('all' or a specific type)
  * @returns {Array<{type, t, label, detail}>} sorted newest-first
  */
 function buildTimelineEvents(data, filter) {
-    return [...data.meals.map(x => ({ type: 'food', t: x.meal_time, label: '🍽️ ' + (x.meal_type || 'Meal').replace(/^./, character => character.toUpperCase()), detail: data.mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })), ...data.glucose.map(x => ({ type: 'glucose', t: x.measured_at, label: '🩸 ' + x.glucose_mmol_l + ' mmol/L', detail: x.timing || '' })), ...data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, label: '🫃 ' + (x.symptom_type || 'Symptom'), detail: (x.severity ?? 0) + '/10' })), ...data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, label: '🚽 Bristol ' + x.bristol_type, detail: '' })), ...data.weights.map(x => ({ type: 'weight', t: x.measured_at, label: '⚖️ ' + Number(x.weight_kg).toFixed(2) + ' kg', detail: x.notes || '' }))].filter(event => filter === 'all' || event.type === filter).sort((a, b) => new Date(b.t) - new Date(a.t));
+    const water = data.waterIntake || [];
+    return [...data.meals.map(x => ({ type: 'food', t: x.meal_time, label: '🍽️ ' + (x.meal_type || 'Meal').replace(/^./, character => character.toUpperCase()), detail: data.mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ') })), ...data.glucose.map(x => ({ type: 'glucose', t: x.measured_at, label: '🩸 ' + x.glucose_mmol_l + ' mmol/L', detail: x.timing || '' })), ...data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, label: '🫃 ' + (x.symptom_type || 'Symptom'), detail: (x.severity ?? 0) + '/10' })), ...data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, label: '🚽 Bristol ' + x.bristol_type, detail: '' })), ...data.weights.map(x => ({ type: 'weight', t: x.measured_at, label: '⚖️ ' + Number(x.weight_kg).toFixed(2) + ' kg', detail: x.notes || '' })), ...water.map(x => ({ type: 'water', t: x.consumed_at, label: '💧 ' + Number(x.amount_ml) + ' ml', detail: x.source === 'meal' ? 'from meal' : 'manual' }))].filter(event => filter === 'all' || event.type === filter).sort((a, b) => new Date(b.t) - new Date(a.t));
 }
 
 /**
@@ -82,7 +83,7 @@ function render() {
     $('userInfo').textContent = user?.email || user?.user_metadata?.user_name || '';
     mealOptions();
 
-    const data = { meals, glucose, symptoms, bowels, weights, mealFoods };
+    const data = { meals, glucose, symptoms, bowels, weights, mealFoods, waterIntake };
 
     $('flist').innerHTML = meals.map(x => entryHtml('meals', x, mealFoods)).join('') || '<p class="muted">No meals yet.</p>';
     $('glist').innerHTML = glucose.map(x => entryHtml('glucose_readings', x, mealFoods)).join('') || '<p class="muted">No readings yet.</p>';
