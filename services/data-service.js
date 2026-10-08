@@ -63,6 +63,7 @@ async function loadWeights() {
 async function loadWaterEntries() {
     try {
         if (!supabaseClient) { setSync('error', 'Supabase client not configured'); return []; }
+        if (!user) return [];
         const { data, error } = await supabaseClient
             .from('water_intake')
             .select('*')
@@ -74,6 +75,7 @@ async function loadWaterEntries() {
         if (/water_intake.*(does not exist|schema cache)|relation .*water_intake.*does not exist/i.test(error.message || '')) {
             return [];
         }
+        if (error instanceof TypeError) return [];
         throw error;
     }
 }
@@ -85,7 +87,7 @@ async function loadWaterEntries() {
 async function load() {
     setSync('syncing');
     try {
-        const [m, g, s, b, w] = await Promise.all([
+        const [m, g, s, b, w, wi] = await Promise.all([
             loadPage('meals', 'meal_time', 'meals'),
             loadGlucose(),
             loadPage('gut_symptoms', 'occurred_at', 'symptoms'),
