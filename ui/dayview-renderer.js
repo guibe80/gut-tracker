@@ -103,7 +103,11 @@ function dvBuild() {
 
     elToggles.innerHTML = DV_LANE_ORDER.map(type => `<button type="button" class="dv-toggle ${dvState.toggles[type] ? 'active' : ''}" data-dv-type="${type}">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</button>`).join('');
 
-    elTimeAxis.innerHTML = ['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00','24:00'].map(label => `<span>${label}</span>`).join('');
+    elTimeAxis.innerHTML = ['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00','24:00'].map((label, i) => {
+        const pct = i * 12.5;
+        const transform = i === 0 ? 'translateX(0)' : i === 8 ? 'translateX(-100%)' : 'translateX(-50%)';
+        return `<span style="position:absolute;left:${pct}%;transform:${transform}">${label}</span>`;
+    }).join('');
 
     const visibleTypes = DV_LANE_ORDER.filter(type => dvState.toggles[type]);
     const data = dvState.data;

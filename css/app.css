@@ -121,8 +121,8 @@
         }
 
         .dayview .dv-timeaxis {
-            display: flex;
-            justify-content: space-between;
+            position: relative;
+            height: 16px;
             font-size: 11px;
             color: var(--m);
             padding: 0 2px 6px;
