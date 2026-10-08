@@ -210,6 +210,9 @@ async function saveSilent(table, payload) {
 
 async function deleteEntry(table, id) {
     if (!id || !confirm('Delete this entry?')) return;
+    if (!supabaseClient) { setSync('error', 'Supabase client not configured'); return; }
+    if (!user) { setSync('error', 'Not logged in'); return; }
+    const msgTarget = { meals: 'fs', glucose_readings: 'gs', gut_symptoms: 'sts', bowel_movements: 'bs', weight_entries: 'ws' }[table] || 'fs';
     setSync('syncing');
     try {
         if (table === 'meals') {
@@ -223,8 +226,10 @@ async function deleteEntry(table, id) {
         if (result.error) throw result.error;
         await load();
     } catch (error) {
-        setSync('error', error.message);
-        setMsg('fs', 'Delete failed: ' + error.message, 'err');
+        const msg = error?.message || String(error);
+        console.warn('[deleteEntry]', table, id, msg);
+        setSync('error', msg);
+        setMsg(msgTarget, 'Delete failed: ' + msg, 'err');
     }
 }
 

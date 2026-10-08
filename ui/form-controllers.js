@@ -27,7 +27,11 @@ function openEditForm(table, id) {
     const record = ({
         meals, glucose, symptoms, bowels, weights
     }[({ meals: 'meals', glucose_readings: 'glucose', gut_symptoms: 'symptoms', bowel_movements: 'bowel', weight_entries: 'weights' }[table])] || []).find(item => item.id === id);
-    if (!record) return;
+    if (!record) {
+        const msgTarget = { meals: 'fs', glucose_readings: 'gs', gut_symptoms: 'sts', bowel_movements: 'bs', weight_entries: 'ws' }[table] || 'fs';
+        setMsg(msgTarget, 'Record not found — it may have been deleted or not yet loaded.', 'err');
+        return;
+    }
     const tab = { meals: 'food', glucose_readings: 'glucose', gut_symptoms: 'symptoms', bowel_movements: 'bowel', weight_entries: 'weight' }[table];
     const fields = localDateTime(record.meal_time || record.measured_at || record.occurred_at);
     document.querySelector(`.tab[data-tab="${tab}"]`)?.click();
