@@ -117,7 +117,7 @@ function dvBuild() {
     let html = '';
     let eventCount = 0;
 
-    const YAXIS_RANGES = { glucose: { min: 4, max: 15, label: 'mmol/L' }, weight: { auto: true, label: 'kg' }, food: { auto: true, label: 'g carbs' }, water: { auto: true, label: 'ml' } };
+    const YAXIS_RANGES = { glucose: { min: 4, max: 15, label: 'mmol/L' }, weight: { auto: true, label: 'kg' }, food: { auto: true, label: 'g carbs' }, water: { maxOnly: true, label: 'ml' } };
 
     for (const type of visibleTypes) {
         const events = dvGetEvents(data, type);
@@ -134,15 +134,21 @@ function dvBuild() {
             laneClass += ' has-yaxis';
             if (type === 'glucose') {
                 yMin = yaxis.min; yMax = yaxis.max;
+            } else if (yaxis.maxOnly && events.length > 0) {
+                const vals = events.map(e => e.value).filter(v => typeof v === 'number' && Number.isFinite(v));
+                if (vals.length) { yMin = 0; yMax = Math.max(...vals); }
             } else if (yaxis.auto && events.length > 0) {
                 const vals = events.map(e => e.value).filter(v => typeof v === 'number' && Number.isFinite(v));
                 if (vals.length) { yMin = type === 'food' ? 0 : Math.min(...vals) - 2; yMax = Math.max(...vals) + 2; }
             }
             if (yMin !== undefined && yMax !== undefined && yMax > yMin) {
                 const range = yMax - yMin;
-                const step = type === 'food' ? (range <= 50 ? 5 : 10) : (range <= 6 ? 1 : range <= 20 ? 2 : 5);
-                const ticks = [];
-                for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) ticks.push(v);
+                const ticks = yaxis.maxOnly ? [yMin, yMax] : (() => {
+                    const step = type === 'food' ? (range <= 50 ? 5 : 10) : (range <= 6 ? 1 : range <= 20 ? 2 : 5);
+                    const t = [];
+                    for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) t.push(v);
+                    return t;
+                })();
                 yaxisHtml = `<div class="dv-yaxis">${ticks.map(v => { const pct = ((v - yMin) / (yMax - yMin)) * 100; return `<span style="bottom:${pct}%">${Number.isInteger(v) ? v : v.toFixed(1)}</span>`; }).join('')}</div><span class="dv-yaxis-label">${yaxis.label || ''}</span>`;
                 if (events.length > 1) {
                     const lines = [];
