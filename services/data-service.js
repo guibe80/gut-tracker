@@ -76,7 +76,8 @@ async function loadWaterEntries() {
             return [];
         }
         if (error instanceof TypeError) return [];
-        throw error;
+        console.warn('[loadWaterEntries] Supabase query failed — returning empty:', error.message);
+        return [];
     }
 }
 
