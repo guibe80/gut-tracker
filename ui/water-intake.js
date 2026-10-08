@@ -157,7 +157,7 @@ async function addWaterEntry(dateKey, amountMl, source, mealId, consumedAt) {
         user_id: user.id,
         amount_ml: Math.round(amountMl),
         source: source || 'manual',
-        consumed_at: consumedAt || (dateKey + 'T12:00:00')
+        consumed_at: consumedAt || new Date().toISOString()
     };
     if (mealId) record.meal_id = mealId;
 
