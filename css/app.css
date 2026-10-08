@@ -49,6 +49,7 @@
             --dv-lane-gut: #6b4c9a;
             --dv-lane-bowel: #9b2c2c;
             --dv-lane-weight: #1c6f8a;
+            --dv-lane-water: #2a7de1;
         }
 
         .dayview .dv-head {
@@ -110,6 +111,7 @@
         .dayview .dv-toggle.active[data-dv-type="gut"] { background: var(--dv-lane-gut); border-color: var(--dv-lane-gut); }
         .dayview .dv-toggle.active[data-dv-type="bowel"] { background: var(--dv-lane-bowel); border-color: var(--dv-lane-bowel); }
         .dayview .dv-toggle.active[data-dv-type="weight"] { background: var(--dv-lane-weight); border-color: var(--dv-lane-weight); }
+        .dayview .dv-toggle.active[data-dv-type="water"] { background: var(--dv-lane-water); border-color: var(--dv-lane-water); }
 
         .dayview .dv-timeline {
             position: relative;
@@ -187,6 +189,7 @@
         .dayview .dv-event[data-dv-type="gut"] { background: var(--dv-lane-gut); color: #fff; }
         .dayview .dv-event[data-dv-type="bowel"] { background: var(--dv-lane-bowel); color: #fff; }
         .dayview .dv-event[data-dv-type="weight"] { background: var(--dv-lane-weight); color: #fff; }
+        .dayview .dv-event[data-dv-type="water"] { background: var(--dv-lane-water); color: #fff; }
 
         .dayview .dv-event-popup {
             position: absolute;

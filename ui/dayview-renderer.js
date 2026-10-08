@@ -27,11 +27,11 @@
 /* State & constants                                                    */
 /* ------------------------------------------------------------------ */
 
-let dvState = { date: new Date().toISOString().slice(0, 10), toggles: { food: true, glucose: true, gut: true, bowel: true, weight: true }, data: null, loading: false };
+let dvState = { date: new Date().toISOString().slice(0, 10), toggles: { food: true, glucose: true, gut: true, bowel: true, weight: true, water: true }, data: null, loading: false };
 
-const DV_LANE_ORDER = ['food', 'glucose', 'gut', 'bowel', 'weight'];
-const DV_LANE_LABEL = { food: 'Food', glucose: 'Glucose', gut: 'Gut', bowel: 'Bowel', weight: 'Weight' };
-const DV_LANE_ICON = { food: '🍽️', glucose: '🩸', gut: '🫃', bowel: '🚽', weight: '⚖️' };
+const DV_LANE_ORDER = ['food', 'glucose', 'gut', 'bowel', 'weight', 'water'];
+const DV_LANE_LABEL = { food: 'Food', glucose: 'Glucose', gut: 'Gut', bowel: 'Bowel', weight: 'Weight', water: 'Water' };
+const DV_LANE_ICON = { food: '🍽️', glucose: '🩸', gut: '🫃', bowel: '🚽', weight: '⚖️', water: '💧' };
 
 /* ------------------------------------------------------------------ */
 /* Data fetching                                                        */
@@ -43,22 +43,24 @@ async function dvFetch(isoDate) {
     const dayEnd = dvDayEnd(isoDate).toISOString();
     if (!supabaseClient || !user) return null;
     try {
-        const [mResult, gResult, sResult, bResult, wResult] = await Promise.all([
+        const [mResult, gResult, sResult, bResult, wResult, wiResult] = await Promise.all([
             supabaseClient.from('meals').select('*').gte('meal_time', dayStart).lte('meal_time', dayEnd).order('meal_time'),
             supabaseClient.from('glucose_readings').select('*').gte('measured_at', dayStart).lte('measured_at', dayEnd).order('measured_at'),
             supabaseClient.from('gut_symptoms').select('*').gte('occurred_at', dayStart).lte('occurred_at', dayEnd).order('occurred_at'),
             supabaseClient.from('bowel_movements').select('*').gte('occurred_at', dayStart).lte('occurred_at', dayEnd).order('occurred_at'),
-            supabaseClient.from('weight_entries').select('*').gte('measured_at', dayStart).lte('measured_at', dayEnd).order('measured_at')
+            supabaseClient.from('weight_entries').select('*').gte('measured_at', dayStart).lte('measured_at', dayEnd).order('measured_at'),
+            supabaseClient.from('water_intake').select('*').gte('consumed_at', dayStart).lte('consumed_at', dayEnd).order('consumed_at')
         ]);
         if (mResult.error) throw mResult.error;
         if (gResult.error) throw gResult.error;
         if (sResult.error) throw sResult.error;
         if (bResult.error) throw bResult.error;
         if (wResult.error) throw wResult.error;
+        if (wiResult.error) throw wiResult.error;
         const mealIds = (mResult.data || []).map(x => x.id);
         let mfResult = { data: [] };
         if (mealIds.length) { mfResult = await supabaseClient.from('meal_foods').select('*').in('meal_id', mealIds); if (mfResult.error) throw mfResult.error; }
-        dvState.data = { meals: mResult.data || [], glucose: gResult.data || [], symptoms: sResult.data || [], bowels: bResult.data || [], weights: wResult.data || [], mealFoods: mfResult.data || [] };
+        dvState.data = { meals: mResult.data || [], glucose: gResult.data || [], symptoms: sResult.data || [], bowels: bResult.data || [], weights: wResult.data || [], waterIntake: wiResult.data || [], mealFoods: mfResult.data || [] };
         dvState.date = isoDate;
         return dvState.data;
     } catch (err) {
@@ -82,6 +84,7 @@ function dvGetEvents(data, type) {
         case 'gut': return data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
         case 'bowel': return data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: 'Bristol ' + x.bristol_type })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
         case 'weight': return data.weights.map(x => ({ type: 'weight', t: x.measured_at, tz: parseTzNotes(x.notes), detail: Number(x.weight_kg).toFixed(2) + ' kg', value: x.weight_kg })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+        case 'water': return (data.waterIntake || []).map(x => ({ type: 'water', t: x.consumed_at, tz: parseTzNotes(x.notes), detail: Number(x.amount_ml) + ' ml', value: x.amount_ml })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
         default: return [];
     }
 }
@@ -114,7 +117,7 @@ function dvBuild() {
     let html = '';
     let eventCount = 0;
 
-    const YAXIS_RANGES = { glucose: { min: 4, max: 15, label: 'mmol/L' }, weight: { auto: true, label: 'kg' }, food: { auto: true, label: 'g carbs' } };
+    const YAXIS_RANGES = { glucose: { min: 4, max: 15, label: 'mmol/L' }, weight: { auto: true, label: 'kg' }, food: { auto: true, label: 'g carbs' }, water: { auto: true, label: 'ml' } };
 
     for (const type of visibleTypes) {
         const events = dvGetEvents(data, type);
@@ -157,7 +160,8 @@ function dvBuild() {
             }
         }
 
-        html += `<div class="${laneClass}" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px}">${trendHtml}${yaxisHtml}<span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>${type === 'food' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-food)">${events.reduce((s,e) => s + (e.value || 0), 0).toFixed(0)}g carbs</div>` : ''}${type === 'glucose' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-glucose)">avg ${(events.reduce((s,e) => s + e.value, 0) / events.length).toFixed(1)}</div>` : ''}`;
+        const infoBadge = type === 'food' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-food)">${events.reduce((s,e) => s + (e.value || 0), 0).toFixed(0)}g carbs</div>` : type === 'glucose' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-glucose)">avg ${(events.reduce((s,e) => s + e.value, 0) / events.length).toFixed(1)}</div>` : type === 'water' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-water)">${events.reduce((s,e) => s + e.value, 0).toFixed(0)} ml</div>` : '';
+        html += `<div class="${laneClass}" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px}">${trendHtml}${yaxisHtml}<span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>${infoBadge}`;
         for (const e of events) {
             const pct = dvPercentThrough(dayStart, e.t);
             const leftPct = pct * 100;
