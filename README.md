@@ -9,6 +9,7 @@ bowel movements, and weight — backed by Supabase PostgreSQL with Row Level Sec
 - Log spot glucose readings (mmol/L) with timing context
 - Track gut symptoms and bowel movements (Bristol type)
 - Record weight entries
+- Track daily water intake with an interactive visualised bottle
 - Visualise everything on a daily timeline with toggleable lanes
 - See insights: glucose averages, trigger associations
 - Import V2 JSON backups and export V3 data
@@ -62,6 +63,7 @@ gut-tracker/
 │   ├── dayview-renderer.js # Day view timeline rendering
 │   ├── render.js           # List/tab rendering + data loading (v3)
 │   ├── timing-utils.js     # Glucose timing offset calculations + meal auto-fill
+│   ├── water-intake.js     # Water intake tracking: bottle viz + meal/drink integration
 │   ├── form-controllers.js # Form state, submit handlers, event wiring
 │   └── hba1c-trend.js     # HbA1c trend estimation (timing-weighted)
 ├── .env                    # Local environment (gitignored, not committed)
@@ -84,6 +86,7 @@ gut-tracker/
 │       ├── validation.test.js       # Unit tests for validation helpers
 │       ├── data-mapping.test.js     # Unit tests for V2 data mapping
 │       └── timing-utils.test.js     # Unit tests for timing/offset logic
+│       └── water-intake.test.js     # Unit tests for water target + drink parsing
 ├── Makefile                # Repeatable syntax checks + dev server
 ├── AGENTS.md               # Agent workflow: git, release, safety rules
 ├── AI_CONTEXT.md           # Architecture, data rules, project checks

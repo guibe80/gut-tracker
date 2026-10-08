@@ -79,7 +79,7 @@ test.describe('Navigation tabs', () => {
   test('all tab buttons exist', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    const tabs = ['food', 'glucose', 'symptoms', 'bowel', 'weight', 'timeline', 'dayview', 'insights', 'data'];
+    const tabs = ['food', 'glucose', 'symptoms', 'bowel', 'weight', 'water', 'timeline', 'dayview', 'insights', 'data'];
     for (const tab of tabs) {
       await expect(page.locator(`.tab[data-tab="${tab}"]`)).toHaveCount(1);
     }

@@ -557,3 +557,60 @@
                 grid-template-columns: 1fr 1fr
             }
         }
+
+    /* ------------------------------------------------------------------ */
+    /* Water intake                                                        */
+    /* ------------------------------------------------------------------ */
+
+    .water-bottle-container {
+        text-align: center;
+        margin: 16px 0
+    }
+
+    .water-bottle {
+        position: relative;
+        width: 100px;
+        height: 320px;
+        margin: 0 auto;
+        border: 3px solid var(--b);
+        border-radius: 50px 50px 16px 16px;
+        overflow: hidden;
+        background: #f0f4f8
+    }
+
+    .water-fill {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: var(--water-fill-pct, 0%);
+        background: linear-gradient(180deg, #4a90d9 0%, #357abd 100%);
+        transition: height 0.5s ease-out
+    }
+
+    .water-fill::before {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 1px
+    }
+
+    .water-progress {
+        margin-top: 12px
+    }
+
+    .water-amount {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--g)
+    }
+
+    .water-percentage {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #4a90d9
+    }
