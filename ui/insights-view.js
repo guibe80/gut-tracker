@@ -165,32 +165,69 @@ function aggregateByMonth(data) {
     const year = monthStart.getFullYear();
     const month = monthStart.getMonth();
     const totalDays = getDaysInMonth(year, month);
-    const monthBuckets = {};
+    const monthBuckets = [];
 
-    for (let day = 1; day <= totalDays; day++) {
-        const d = new Date(year, month, day);
-        const key = getLocalDateKey(d);
-        monthBuckets[key] = { date: key, carbs: 0, glucoseSum: 0, glucoseCount: 0, weightSum: 0, weightCount: 0, waterSum: 0, waterCount: 0 };
+    for (let weekIndex = 0; weekIndex < Math.ceil(totalDays / 7); weekIndex++) {
+        const startDay = weekIndex * 7 + 1;
+        const endDay = Math.min(totalDays, startDay + 6);
+        const startDate = new Date(year, month, startDay, 0, 0, 0);
+        const endDate = new Date(year, month, endDay, 0, 0, 0);
+        monthBuckets.push({
+            date: getLocalDateKey(startDate),
+            label: `W${weekIndex + 1}`,
+            totalCarbs: 0,
+            daysInBucket: endDay - startDay + 1,
+            glucoseSum: 0,
+            glucoseCount: 0,
+            weightSum: 0,
+            weightCount: 0,
+            waterSum: 0,
+            waterCount: 0,
+        });
     }
+
+    const bucketIndexForDate = (value) => {
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        const dayOfMonth = date.getDate();
+        return Math.floor((dayOfMonth - 1) / 7);
+    };
 
     for (const meal of data.meals || []) {
-        const key = getLocalDateKey(meal.meal_time);
-        if (monthBuckets[key]) monthBuckets[key].carbs += Number(meal.estimated_carbohydrate_g) || 0;
+        const bucketIndex = bucketIndexForDate(meal.meal_time);
+        if (bucketIndex == null || !monthBuckets[bucketIndex]) continue;
+        monthBuckets[bucketIndex].totalCarbs += Number(meal.estimated_carbohydrate_g) || 0;
     }
     for (const g of data.glucose || []) {
-        const key = getLocalDateKey(g.measured_at);
-        if (monthBuckets[key]) { monthBuckets[key].glucoseSum += Number(g.glucose_mmol_l) || 0; monthBuckets[key].glucoseCount++; }
+        const bucketIndex = bucketIndexForDate(g.measured_at);
+        if (bucketIndex == null || !monthBuckets[bucketIndex]) continue;
+        monthBuckets[bucketIndex].glucoseSum += Number(g.glucose_mmol_l) || 0;
+        monthBuckets[bucketIndex].glucoseCount++;
     }
     for (const w of data.weights || []) {
-        const key = getLocalDateKey(w.measured_at);
-        if (monthBuckets[key]) { monthBuckets[key].weightSum += Number(w.weight_kg) || 0; monthBuckets[key].weightCount++; }
+        const bucketIndex = bucketIndexForDate(w.measured_at);
+        if (bucketIndex == null || !monthBuckets[bucketIndex]) continue;
+        monthBuckets[bucketIndex].weightSum += Number(w.weight_kg) || 0;
+        monthBuckets[bucketIndex].weightCount++;
     }
     for (const wi of data.water || []) {
-        const key = getLocalDateKey(wi.consumed_at);
-        if (monthBuckets[key]) { monthBuckets[key].waterSum += Number(wi.amount_ml) || 0; monthBuckets[key].waterCount++; }
+        const bucketIndex = bucketIndexForDate(wi.consumed_at);
+        if (bucketIndex == null || !monthBuckets[bucketIndex]) continue;
+        monthBuckets[bucketIndex].waterSum += Number(wi.amount_ml) || 0;
+        monthBuckets[bucketIndex].waterCount++;
     }
 
-    return Object.values(monthBuckets);
+    return monthBuckets.map(bucket => ({
+        date: bucket.date,
+        label: bucket.label,
+        carbs: bucket.daysInBucket ? bucket.totalCarbs / bucket.daysInBucket : 0,
+        glucoseSum: bucket.glucoseSum,
+        glucoseCount: bucket.glucoseCount,
+        weightSum: bucket.weightSum,
+        weightCount: bucket.weightCount,
+        waterSum: bucket.waterSum,
+        waterCount: bucket.waterCount,
+    }));
 }
 
 function aggregateByWeek(data) {
@@ -322,15 +359,22 @@ function buildTrendChart(values, labels, type, unit, explicitDates) {
 /* Summary cards                                                       */
 /* ------------------------------------------------------------------ */
 
-function buildSummaryCards(days) {
+function buildSummaryCards(days, isWeek) {
     const totalCarbs = days.reduce((s, d) => s + d.carbs, 0);
-    const avgGlucose = days.reduce((s, d) => s + d.glucoseSum, 0) / Math.max(1, days.reduce((s, d) => s + d.glucoseCount, 0));
-    const avgWeight = days.reduce((s, d) => s + d.weightSum, 0) / Math.max(1, days.reduce((s, d) => s + d.weightCount, 0));
-    const avgWater = days.reduce((s, d) => s + d.waterSum, 0) / Math.max(1, days.reduce((s, d) => s + d.waterCount, 0));
+    const avgCarbs = isWeek ? totalCarbs : totalCarbs / Math.max(1, days.length);
+    const avgGlucose = isWeek
+        ? days.reduce((s, d) => s + d.glucoseSum, 0) / Math.max(1, days.reduce((s, d) => s + d.glucoseCount, 0))
+        : days.reduce((s, d) => s + (d.glucoseCount ? d.glucoseSum / d.glucoseCount : 0), 0) / Math.max(1, days.length);
+    const avgWeight = isWeek
+        ? days.reduce((s, d) => s + d.weightSum, 0) / Math.max(1, days.reduce((s, d) => s + d.weightCount, 0))
+        : days.reduce((s, d) => s + (d.weightCount ? d.weightSum / d.weightCount : 0), 0) / Math.max(1, days.length);
+    const avgWater = isWeek
+        ? days.reduce((s, d) => s + d.waterSum, 0) / Math.max(1, days.reduce((s, d) => s + d.waterCount, 0))
+        : days.reduce((s, d) => s + (d.waterCount ? d.waterSum / d.waterCount : 0), 0) / Math.max(1, days.length);
     const daysWithData = days.filter(d => d.carbs > 0 || d.glucoseCount > 0 || d.weightCount > 0 || d.waterCount > 0).length;
 
     return `<div class="metrics">
-        <div class="metricbox"><div class="muted">Total Carbs</div><div class="metric">${totalCarbs.toFixed(0)}g</div><div class="muted">${daysWithData} days with data</div></div>
+        <div class="metricbox"><div class="muted">${isWeek ? 'Total Carbs' : 'Avg Carbs / day'}</div><div class="metric">${avgCarbs.toFixed(0)}g</div><div class="muted">${daysWithData} ${isWeek ? 'days' : 'weeks'} with data</div></div>
         <div class="metricbox"><div class="muted">Avg Glucose</div><div class="metric">${avgGlucose.toFixed(1)}</div><div class="muted">mmol/L</div></div>
         <div class="metricbox"><div class="muted">Avg Weight</div><div class="metric">${avgWeight.toFixed(1)}</div><div class="muted">kg</div></div>
         <div class="metricbox"><div class="muted">Avg Water</div><div class="metric">${avgWater.toFixed(0)}</div><div class="muted">ml/day</div></div>
@@ -360,7 +404,7 @@ function renderInsights() {
     }
 
     const days = isWeek ? aggregateByDay(data) : aggregateByMonth(data);
-    const labels = days.map(d => d.date.slice(5));
+    const labels = days.map(d => d.label || d.date.slice(5));
     const dates = days.map(d => d.date);
     const carbs = days.map(d => d.carbs);
     const glucose = days.map(d => d.glucoseCount > 0 ? d.glucoseSum / d.glucoseCount : 0);
@@ -376,7 +420,7 @@ function renderInsights() {
                 <button type="button" class="insights-nav" id="insightsNext">→</button>
             </div>
         </div>
-        ${buildSummaryCards(days)}
+        ${buildSummaryCards(days, isWeek)}
         <div class="insights-charts">
             <div class="card">
                 <h3>🍽️ Carbs (g)</h3>

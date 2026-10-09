@@ -24,39 +24,44 @@ vm.runInContext(datetimeCode, sandbox);
 vm.runInContext(insightsCode, sandbox);
 
 describe('insights month aggregation', () => {
-    test('aggregates a monthly view by local date buckets', () => {
+    test('groups monthly data into weekly averages instead of daily buckets', () => {
         vm.runInContext("insightsState.mode = 'month'; insightsState.monthOffset = 0;", sandbox);
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth();
         const day1 = new Date(year, month, 1, 8, 0, 0);
-        const day15 = new Date(year, month, 15, 18, 0, 0);
+        const day5 = new Date(year, month, 5, 12, 0, 0);
+        const day12 = new Date(year, month, 12, 8, 0, 0);
+        const day16 = new Date(year, month, 16, 18, 0, 0);
         const day20 = new Date(year, month, 20, 8, 0, 0);
-        const day7 = new Date(year, month, 7, 8, 0, 0);
-        const day11 = new Date(year, month, 11, 8, 0, 0);
+        const day25 = new Date(year, month, 25, 8, 0, 0);
 
         sandbox.data = {
             meals: [
                 { meal_time: day1.toISOString(), estimated_carbohydrate_g: 20 },
-                { meal_time: day15.toISOString(), estimated_carbohydrate_g: 30 },
+                { meal_time: day5.toISOString(), estimated_carbohydrate_g: 40 },
+                { meal_time: day12.toISOString(), estimated_carbohydrate_g: 50 },
+                { meal_time: day16.toISOString(), estimated_carbohydrate_g: 30 },
             ],
             glucose: [
                 { measured_at: day1.toISOString(), glucose_mmol_l: 5.5 },
                 { measured_at: day20.toISOString(), glucose_mmol_l: 6.2 },
+                { measured_at: day25.toISOString(), glucose_mmol_l: 5.8 },
             ],
             weights: [
-                { measured_at: day7.toISOString(), weight_kg: 70.5 },
+                { measured_at: day12.toISOString(), weight_kg: 70.5 },
             ],
             water: [
-                { consumed_at: day11.toISOString(), amount_ml: 500 },
+                { consumed_at: day16.toISOString(), amount_ml: 500 },
             ],
         };
 
         const result = vm.runInContext('aggregateByMonth(data)', sandbox);
         assert.ok(Array.isArray(result));
-        assert.ok(result.length >= 1);
-        assert.ok(result.some(day => day.carbs === 20 || day.carbs === 30));
-        assert.ok(result.some(day => day.glucoseCount === 1 && day.glucoseSum >= 5.5));
+        assert.ok(result.length > 0 && result.length <= 5, `Expected 1-5 weekly buckets, got ${result.length}`);
+        assert.ok(result.every(bucket => bucket.carbs >= 0));
+        assert.ok(result.some(bucket => bucket.label && bucket.label.startsWith('W')));
+        assert.ok(result.some(bucket => bucket.carbs > 0 && bucket.carbs < 50));
     });
 });
 

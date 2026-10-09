@@ -1,4 +1,4 @@
-const APP_VERSION = '4.9.5';
+const APP_VERSION = '4.9.6';
 
 const SUPABASE_KEY_STORAGE = 'gut_tracker_publishable_key';
 
