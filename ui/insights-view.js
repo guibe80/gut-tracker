@@ -188,16 +188,28 @@ const CHART_COLORS = { carbs: 'var(--dv-lane-food)', glucose: 'var(--dv-lane-glu
 function buildTrendChart(values, labels, type, unit) {
     if (!values.length) return '<p class="muted">No data</p>';
 
-    const max = Math.max(...values, 1);
-    const min = Math.min(...values, 0);
+    // Filter out null, undefined, empty, and zero values — only valid positive measurements
+    const validPoints = [];
+    for (let i = 0; i < values.length; i++) {
+        const v = values[i];
+        if (v == null || v === '' || v === undefined) continue;
+        const num = Number(v);
+        if (!Number.isFinite(num) || num <= 0) continue;
+        validPoints.push({ value: num, label: labels[i], originalIndex: i });
+    }
+
+    if (!validPoints.length) return '<p class="muted">No data</p>';
+
+    const max = Math.max(...validPoints.map(p => p.value));
+    const min = Math.min(...validPoints.map(p => p.value), 0);
     const range = max - min || 1;
 
-    // Calculate positions as percentages (0-100)
-    const points = values.map((v, i) => ({
-        x: (i / Math.max(1, values.length - 1)) * 100,
-        y: ((v - min) / range) * 100,
-        value: v,
-        label: labels[i]
+    // Calculate positions as percentages (0-100) for DOM markers
+    const points = validPoints.map((p, i) => ({
+        x: (i / Math.max(1, validPoints.length - 1)) * 100,
+        y: ((p.value - min) / range) * 100,
+        value: p.value,
+        label: p.label
     }));
 
     // Build Y-axis ticks (4 intervals = 5 labels)
@@ -208,14 +220,22 @@ function buildTrendChart(values, labels, type, unit) {
         yTicks.push({ value: v, pct: (i / numTicks) * 100 });
     }
 
-    // Build SVG dotted lines connecting consecutive points (day view style)
+    // Build SVG dotted lines connecting consecutive valid points
+    // Use a fixed viewBox (600x120) so line coordinates work in user units
+    const svgW = 600, svgH = 120, pad = 10;
+    const chartW = svgW - pad * 2;
+    const chartH = svgH - pad * 2;
     const lines = [];
     for (let i = 1; i < points.length; i++) {
         const prev = points[i - 1];
         const curr = points[i];
-        lines.push(`<line x1="${prev.x}%" y1="${100 - prev.y}%" x2="${curr.x}%" y2="${100 - curr.y}%" stroke="${CHART_COLORS[type]}" stroke-width="2" opacity="0.35" stroke-dasharray="4 2"/>`);
+        const x1 = pad + (prev.x / 100) * chartW;
+        const y1 = pad + chartH - (prev.y / 100) * chartH;
+        const x2 = pad + (curr.x / 100) * chartW;
+        const y2 = pad + chartH - (curr.y / 100) * chartH;
+        lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${CHART_COLORS[type]}" stroke-width="2" opacity="0.5" stroke-dasharray="4 2"/>`);
     }
-    const trendSvg = `<svg class="chart-trend" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1">${lines.join('')}</svg>`;
+    const trendSvg = `<svg class="chart-trend" viewBox="0 0 ${svgW} ${svgH}" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1">${lines.join('')}</svg>`;
 
     // Build emoji markers with hover popups (day view style)
     const markers = points.map(p => `
@@ -381,19 +401,21 @@ function installInsightsView() {
     const container = $('insightsView');
     if (!container) return;
 
-    const modeToggle = $('insightsModeToggle');
-    if (modeToggle) {
-        modeToggle.addEventListener('click', () => {
-            insightsState.mode = insightsState.mode === 'week' ? 'month' : 'week';
-            modeToggle.textContent = insightsState.mode === 'week' ? '📅 Monthly' : '📅 Weekly';
-            loadInsights();
-        });
-    }
+    // Use event delegation so navigation works even after re-renders
+    container.addEventListener('click', (event) => {
+        const target = event.target.closest('button');
+        if (!target) return;
 
-    const prevBtn = $('insightsPrev');
-    const nextBtn = $('insightsNext');
-    if (prevBtn) prevBtn.addEventListener('click', insightsPrev);
-    if (nextBtn) nextBtn.addEventListener('click', insightsNext);
+        if (target.id === 'insightsPrev') {
+            insightsPrev();
+        } else if (target.id === 'insightsNext') {
+            insightsNext();
+        } else if (target.id === 'insightsModeToggle') {
+            insightsState.mode = insightsState.mode === 'week' ? 'month' : 'week';
+            target.textContent = insightsState.mode === 'week' ? '📅 Monthly' : '📅 Weekly';
+            loadInsights();
+        }
+    });
 
     loadInsights();
 }
