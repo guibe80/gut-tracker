@@ -210,7 +210,9 @@
         .chart-yaxis span { position: absolute; right: 0; font-size: 9px; color: var(--m); transform: translateY(50%); text-align: right; }
         .chart-yaxis-label { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 9px; color: var(--m); white-space: nowrap; }
         .chart-plot { position: relative; height: 120px; border-bottom: 1px solid var(--b); }
+        .chart-plot-inner { position: absolute; inset: 0 16px; }
         .chart-xaxis { position: relative; height: 18px; margin-top: 2px; overflow: hidden; }
+        .chart-xaxis-inner { position: relative; height: 100%; margin-inline: 16px; }
         .chart-xaxis span { position: absolute; transform: translateX(-50%); font-size: 9px; color: var(--m); white-space: nowrap; line-height: 1; }
         .chart-event { position: absolute; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); cursor: pointer; transform: translate(-50%, 50%); border: 2px solid #fff; z-index: 2; transition: transform 0.12s ease; }
         .chart-event:hover { transform: translate(-50%, 50%) scale(1.2); z-index: 5; }

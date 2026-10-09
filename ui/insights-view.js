@@ -315,17 +315,17 @@ function buildTrendChart(values, labels, type, unit, explicitDates) {
         yTicks.push({ value: v, pct: (i / numTicks) * 100 });
     }
 
-    const svgW = 600, svgH = 120, pad = 10;
-    const chartW = svgW - pad * 2;
-    const chartH = svgH - pad * 2;
+    const svgW = 600, svgH = 120, padY = 10;
+    const chartW = svgW;
+    const chartH = svgH - padY * 2;
     const lines = [];
     for (let i = 1; i < points.length; i++) {
         const prev = points[i - 1];
         const curr = points[i];
-        const x1 = pad + (prev.x / 100) * chartW;
-        const y1 = pad + chartH - (prev.y / 100) * chartH;
-        const x2 = pad + (curr.x / 100) * chartW;
-        const y2 = pad + chartH - (curr.y / 100) * chartH;
+        const x1 = (prev.x / 100) * chartW;
+        const y1 = padY + chartH - (prev.y / 100) * chartH;
+        const x2 = (curr.x / 100) * chartW;
+        const y2 = padY + chartH - (curr.y / 100) * chartH;
         lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${CHART_COLORS[type]}" stroke-width="2" opacity="0.5" stroke-dasharray="4 2"/>`);
     }
     const trendSvg = `<svg class="chart-trend" viewBox="0 0 ${svgW} ${svgH}" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1">${lines.join('')}</svg>`;
@@ -356,10 +356,12 @@ function buildTrendChart(values, labels, type, unit, explicitDates) {
                 <span class="chart-yaxis-label" style="right: 1px;">${unit}</span>
             </div>
             <div class="chart-plot">
-                ${trendSvg}
-                ${markers}
+                <div class="chart-plot-inner">
+                    ${trendSvg}
+                    ${markers}
+                </div>
             </div>
-            <div class="chart-xaxis">${xAxisLabels}</div>
+            <div class="chart-xaxis"><div class="chart-xaxis-inner">${xAxisLabels}</div></div>
         </div>
     `;
 }

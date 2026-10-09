@@ -74,6 +74,15 @@ describe('insights chart rendering', () => {
         assert.match(html, /04-Oct/);
     });
 
+    test('insets chart points and axis labels to keep endpoint labels visible', () => {
+        const html = vm.runInContext("buildTrendChart([5, 7], ['01-Oct', '10-Oct'], 'glucose', 'mmol/L', ['2026-10-01', '2026-10-10'])", sandbox);
+        assert.match(html, /class="chart-plot-inner"/);
+        assert.match(html, /class="chart-xaxis-inner"/);
+        assert.match(html, /left:0%/);
+        assert.match(html, /left:100%/);
+        assert.match(html, /x1="0"[^>]+x2="600"/);
+    });
+
     test('formats daily x-axis labels as DD-MMM', () => {
         assert.equal(vm.runInContext("formatInsightAxisLabel('2024-10-04')", sandbox), '04-Oct');
         assert.equal(vm.runInContext("formatInsightAxisLabel('2024-12-31')", sandbox), '31-Dec');
