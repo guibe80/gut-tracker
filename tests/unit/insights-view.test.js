@@ -67,4 +67,19 @@ describe('insights chart rendering', () => {
         assert.match(html, /right:\s*1px/);
         assert.match(html, /chart-yaxis-label/);
     });
+
+    test('toggles the mode when the actual insights mode button is clicked', () => {
+        vm.runInContext("insightsState.mode = 'week'; insightsState.weekOffset = 0; insightsState.monthOffset = 0;", sandbox);
+        sandbox.supabaseClient = { from: () => ({ select: () => ({ gte: () => ({ lte: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }) }) }) };
+        sandbox.user = { id: 'u1' };
+        const toggle = { textContent: '📅 Monthly', listeners: {}, addEventListener(type, cb) { this.listeners[type] = cb; } };
+        toggle.click = () => toggle.listeners.click();
+        const container = { listeners: {}, addEventListener(type, cb) { this.listeners[type] = cb; } };
+        const mockDom = { insightsModeToggle: toggle, insightsView: container };
+        sandbox.$ = (id) => mockDom[id] || null;
+        vm.runInContext("installInsightsView()", sandbox);
+        toggle.click();
+        assert.equal(vm.runInContext('insightsState.mode', sandbox), 'month');
+        assert.match(toggle.textContent, /Weekly/);
+    });
 });

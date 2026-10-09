@@ -1,5 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
+const versionPattern = /V\d+\.\d+\.\d+/i;
+
 /**
  * Browser smoke tests for Gut + Glucose Tracker
  *
@@ -23,7 +25,7 @@ test.describe('App loads', () => {
   test('index page has correct title and version', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveTitle(/Gut \+ Glucose Tracker V4\.5\.2/i);
+    await expect(page).toHaveTitle(new RegExp(`Gut \\+ Glucose Tracker ${versionPattern.source}`, 'i'));
   });
 
   test('auth screen is visible when not logged in', async ({ page }) => {
@@ -36,7 +38,7 @@ test.describe('App loads', () => {
   test('version is displayed in footer', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('[data-app-version]')).toHaveText(/4\.5\.2/);
+    await expect(page.locator('[data-app-version]')).toHaveText(versionPattern);
   });
 
   test('setup link is visible on auth screen', async ({ page }) => {
@@ -58,7 +60,7 @@ test.describe('Setup page', () => {
   test('setup page shows version', async ({ page }) => {
     await page.goto('/setup.html');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('[data-app-version]')).toHaveText(/4\.5\.2/);
+    await expect(page.locator('[data-app-version]')).toHaveText(versionPattern);
   });
 });
 

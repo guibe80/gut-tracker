@@ -26,7 +26,7 @@
             history is the source of truth</footer>
     </div>
     <script>
-        document.title += ` V${APP_VERSION}`;
+        document.title = `Gut + Glucose Tracker V${APP_VERSION}`;
         document.querySelectorAll('[data-app-version]').forEach(element => { element.textContent = `V${APP_VERSION}` });
         const SUPABASE_URL = 'https://sywbgjdxptvwtjfrjgfk.supabase.co';
         const key = document.getElementById('key');

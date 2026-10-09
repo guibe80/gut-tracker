@@ -15,13 +15,19 @@
 /* State                                                               */
 /* ------------------------------------------------------------------ */
 
-let insightsState = {
+var insightsState = {
     mode: 'week',
     weekOffset: 0,
     monthOffset: 0,
     data: null,
     loading: false,
 };
+
+const safeEsc = typeof esc === 'function'
+    ? esc
+    : function(value) {
+        return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
 
 /* ------------------------------------------------------------------ */
 /* Date helpers                                                        */
@@ -199,17 +205,16 @@ function aggregateByWeek(data) {
 const CHART_ICONS = { carbs: '🍽️', glucose: '🩸', weight: '⚖️', water: '💧' };
 const CHART_COLORS = { carbs: 'var(--dv-lane-food)', glucose: 'var(--dv-lane-glucose)', weight: 'var(--dv-lane-weight)', water: 'var(--dv-lane-water)' };
 
-function buildTrendChart(values, labels, type, unit) {
+function buildTrendChart(values, labels, type, unit, explicitDates) {
     if (!values.length) return '<p class="muted">No data</p>';
 
-    // Filter out null, undefined, empty, and zero values — only valid positive measurements
     const validPoints = [];
     for (let i = 0; i < values.length; i++) {
         const v = values[i];
         if (v == null || v === '' || v === undefined) continue;
         const num = Number(v);
         if (!Number.isFinite(num) || num <= 0) continue;
-        validPoints.push({ value: num, label: labels[i], originalIndex: i });
+        validPoints.push({ value: num, label: labels[i], labelDate: explicitDates && explicitDates[i] ? explicitDates[i] : labels[i], index: i });
     }
 
     if (!validPoints.length) return '<p class="muted">No data</p>';
@@ -218,15 +223,45 @@ function buildTrendChart(values, labels, type, unit) {
     const min = Math.min(...validPoints.map(p => p.value), 0);
     const range = max - min || 1;
 
-    // Calculate positions as percentages (0-100) for DOM markers
-    const points = validPoints.map((p, i) => ({
-        x: (i / Math.max(1, validPoints.length - 1)) * 100,
-        y: ((p.value - min) / range) * 100,
-        value: p.value,
-        label: p.label
-    }));
+    const fullDateValues = Array.isArray(explicitDates)
+        ? explicitDates
+              .map(dateValue => {
+                  if (!dateValue) return null;
+                  const candidate = typeof dateValue === 'string' ? dateValue : String(dateValue);
+                  const parsed = new Date(candidate);
+                  return Number.isNaN(parsed.getTime()) ? null : parsed;
+              })
+              .filter(Boolean)
+        : [];
 
-    // Build Y-axis ticks (4 intervals = 5 labels)
+    const dateValues = fullDateValues.length ? fullDateValues : validPoints
+        .map(p => {
+            if (!p.labelDate) return null;
+            const candidate = typeof p.labelDate === 'string' ? p.labelDate : String(p.labelDate);
+            if (!candidate) return null;
+            const parsed = new Date(candidate);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        })
+        .filter(Boolean);
+
+    const domainStart = dateValues.length ? new Date(Math.min(...dateValues.map(d => d.getTime()))) : null;
+    const domainEnd = dateValues.length ? new Date(Math.max(...dateValues.map(d => d.getTime()))) : null;
+    const domainSpan = domainEnd && domainStart ? Math.max(1, domainEnd.getTime() - domainStart.getTime()) : 0;
+
+    const points = validPoints.map((p, i) => {
+        const hasDate = p.labelDate && domainStart && domainEnd;
+        const x = hasDate
+            ? ((new Date(p.labelDate).getTime() - domainStart.getTime()) / domainSpan) * 100
+            : (i / Math.max(1, validPoints.length - 1)) * 100;
+        return {
+            x,
+            y: ((p.value - min) / range) * 100,
+            value: p.value,
+            label: p.label,
+            labelDate: p.labelDate
+        };
+    });
+
     const yTicks = [];
     const numTicks = 4;
     for (let i = 0; i <= numTicks; i++) {
@@ -234,8 +269,6 @@ function buildTrendChart(values, labels, type, unit) {
         yTicks.push({ value: v, pct: (i / numTicks) * 100 });
     }
 
-    // Build SVG dotted lines connecting consecutive valid points
-    // Use a fixed viewBox (600x120) so line coordinates work in user units
     const svgW = 600, svgH = 120, pad = 10;
     const chartW = svgW - pad * 2;
     const chartH = svgH - pad * 2;
@@ -251,26 +284,23 @@ function buildTrendChart(values, labels, type, unit) {
     }
     const trendSvg = `<svg class="chart-trend" viewBox="0 0 ${svgW} ${svgH}" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1">${lines.join('')}</svg>`;
 
-    // Build emoji markers with hover popups (day view style)
     const markers = points.map(p => `
         <div class="chart-event" data-type="${type}" style="left:${p.x}%;bottom:${p.y}%"
-             title="${esc(p.label)}: ${p.value.toFixed(1)} ${unit}">
+             title="${safeEsc(p.label)}: ${p.value.toFixed(1)} ${unit}">
             ${CHART_ICONS[type]}
-            <div class="chart-popup">${esc(p.label)}: ${p.value.toFixed(1)} ${unit}</div>
+            <div class="chart-popup">${safeEsc(p.label)}: ${p.value.toFixed(1)} ${unit}</div>
         </div>
     `).join('');
 
-    // Build Y-axis labels
     const yAxisLabels = yTicks.map(t =>
         `<span style="bottom:${t.pct}%">${t.value.toFixed(0)}</span>`
     ).join('');
 
-    // Build X-axis labels (show all if <= 7, otherwise sample)
     const xAxisLabels = labels.map((l, i) => {
-        if (labels.length <= 7 || i % Math.ceil(labels.length / 7) === 0) {
-            return `<span style="left:${(i / Math.max(1, labels.length - 1)) * 100}%">${esc(l)}</span>`;
-        }
-        return '';
+        if (!labels.length || (!explicitDates && labels.length > 7 && i % Math.ceil(labels.length / 7) !== 0)) return '';
+        const pointIndex = validPoints.findIndex(p => p.index === i);
+        const xPct = pointIndex >= 0 ? points[pointIndex].x : (i / Math.max(1, labels.length - 1)) * 100;
+        return `<span style="left:${xPct}%">${safeEsc(l)}</span>`;
     }).join('');
 
     return `
@@ -331,6 +361,7 @@ function renderInsights() {
 
     const days = isWeek ? aggregateByDay(data) : aggregateByMonth(data);
     const labels = days.map(d => d.date.slice(5));
+    const dates = days.map(d => d.date);
     const carbs = days.map(d => d.carbs);
     const glucose = days.map(d => d.glucoseCount > 0 ? d.glucoseSum / d.glucoseCount : 0);
     const weight = days.map(d => d.weightCount > 0 ? d.weightSum / d.weightCount : 0);
@@ -349,19 +380,19 @@ function renderInsights() {
         <div class="insights-charts">
             <div class="card">
                 <h3>🍽️ Carbs (g)</h3>
-                ${buildTrendChart(carbs, labels, 'carbs', 'g')}
+                ${buildTrendChart(carbs, labels, 'carbs', 'g', dates)}
             </div>
             <div class="card">
                 <h3>🩸 Glucose (mmol/L)</h3>
-                ${buildTrendChart(glucose, labels, 'glucose', 'mmol/L')}
+                ${buildTrendChart(glucose, labels, 'glucose', 'mmol/L', dates)}
             </div>
             <div class="card">
                 <h3>⚖️ Weight (kg)</h3>
-                ${buildTrendChart(weight, labels, 'weight', 'kg')}
+                ${buildTrendChart(weight, labels, 'weight', 'kg', dates)}
             </div>
             <div class="card">
                 <h3>💧 Water (ml)</h3>
-                ${buildTrendChart(water, labels, 'water', 'ml')}
+                ${buildTrendChart(water, labels, 'water', 'ml', dates)}
             </div>
         </div>
     `;
@@ -420,7 +451,15 @@ function installInsightsView() {
     const container = $('insightsView');
     if (!container) return;
 
-    // Use event delegation so navigation works even after re-renders
+    const toggle = $('insightsModeToggle');
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            insightsState.mode = insightsState.mode === 'week' ? 'month' : 'week';
+            syncInsightsModeToggle();
+            loadInsights();
+        });
+    }
+
     container.addEventListener('click', (event) => {
         const target = event.target.closest('button');
         if (!target) return;
@@ -429,10 +468,6 @@ function installInsightsView() {
             insightsPrev();
         } else if (target.id === 'insightsNext') {
             insightsNext();
-        } else if (target.id === 'insightsModeToggle') {
-            insightsState.mode = insightsState.mode === 'week' ? 'month' : 'week';
-            syncInsightsModeToggle();
-            loadInsights();
         }
     });
 
