@@ -3,15 +3,12 @@
  *
  * Weekly and Monthly insights view with trends.
  * Shows: total carbs, average glucose, weight average, water average.
- * Uses simple SVG bar/line charts — no external dependencies.
+ * Uses simple SVG charts with dots connected by lines — day view style.
  *
  * Depends on globals from utils/ and services/ (loaded via <script> tags):
  *   - supabaseClient, user            (set up by index.html)
  *   - $, esc, fmt, localIso          (utils/html.js, utils/datetime.js)
  *   - dvFormatDate, dvParseDate      (utils/datetime.js)
- *
- * Depends on globals from index.html:
- *   - dvState                         (module-level state from dayview-renderer.js)
  */
 
 /* ------------------------------------------------------------------ */
@@ -19,9 +16,9 @@
 /* ------------------------------------------------------------------ */
 
 let insightsState = {
-    mode: 'week', // 'week' or 'month'
-    weekOffset: 0, // 0 = current week, -1 = last week, etc.
-    monthOffset: 0, // 0 = current month, -1 = last month, etc.
+    mode: 'week',
+    weekOffset: 0,
+    monthOffset: 0,
     data: null,
     loading: false,
 };
@@ -33,7 +30,7 @@ let insightsState = {
 function getWeekStart(date) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - d.getDay()); // Sunday
+    d.setDate(d.getDate() - d.getDay());
     return d;
 }
 
@@ -115,62 +112,30 @@ function aggregateByDay(data) {
     const days = {};
     const now = new Date();
 
-    // Initialize all days in the range
-    if (insightsState.mode === 'week') {
-        const weekStart = getWeekStart(now);
-        weekStart.setDate(weekStart.getDate() + insightsState.weekOffset * 7);
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(weekStart);
-            d.setDate(d.getDate() + i);
-            const key = dvFormatDate(d);
-            days[key] = { date: key, carbs: 0, glucoseSum: 0, glucoseCount: 0, weightSum: 0, weightCount: 0, waterSum: 0, waterCount: 0 };
-        }
-    } else {
-        const monthStart = getMonthStart(now);
-        monthStart.setMonth(monthStart.getMonth() + insightsState.monthOffset);
-        const year = monthStart.getFullYear();
-        const month = monthStart.getMonth();
-        const numDays = getDaysInMonth(year, month);
-        for (let i = 1; i <= numDays; i++) {
-            const d = new Date(year, month, i);
-            const key = dvFormatDate(d);
-            days[key] = { date: key, carbs: 0, glucoseSum: 0, glucoseCount: 0, weightSum: 0, weightCount: 0, waterSum: 0, waterCount: 0 };
-        }
+    const weekStart = getWeekStart(now);
+    weekStart.setDate(weekStart.getDate() + insightsState.weekOffset * 7);
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(d.getDate() + i);
+        const key = dvFormatDate(d);
+        days[key] = { date: key, carbs: 0, glucoseSum: 0, glucoseCount: 0, weightSum: 0, weightCount: 0, waterSum: 0, waterCount: 0 };
     }
 
-    // Aggregate meals
     for (const meal of data.meals) {
         const key = dvFormatDate(new Date(meal.meal_time));
-        if (days[key]) {
-            days[key].carbs += Number(meal.estimated_carbohydrate_g) || 0;
-        }
+        if (days[key]) days[key].carbs += Number(meal.estimated_carbohydrate_g) || 0;
     }
-
-    // Aggregate glucose
     for (const g of data.glucose) {
         const key = dvFormatDate(new Date(g.measured_at));
-        if (days[key]) {
-            days[key].glucoseSum += Number(g.glucose_mmol_l) || 0;
-            days[key].glucoseCount++;
-        }
+        if (days[key]) { days[key].glucoseSum += Number(g.glucose_mmol_l) || 0; days[key].glucoseCount++; }
     }
-
-    // Aggregate weight
     for (const w of data.weights) {
         const key = dvFormatDate(new Date(w.measured_at));
-        if (days[key]) {
-            days[key].weightSum += Number(w.weight_kg) || 0;
-            days[key].weightCount++;
-        }
+        if (days[key]) { days[key].weightSum += Number(w.weight_kg) || 0; days[key].weightCount++; }
     }
-
-    // Aggregate water
     for (const wi of data.water) {
         const key = dvFormatDate(new Date(wi.consumed_at));
-        if (days[key]) {
-            days[key].waterSum += Number(wi.amount_ml) || 0;
-            days[key].waterCount++;
-        }
+        if (days[key]) { days[key].waterSum += Number(wi.amount_ml) || 0; days[key].waterCount++; }
     }
 
     return Object.values(days);
@@ -185,111 +150,67 @@ function aggregateByWeek(data) {
     const month = monthStart.getMonth();
     const numDays = getDaysInMonth(year, month);
 
-    // Initialize all weeks in the month
     const firstWeekStart = getWeekStart(new Date(year, month, 1));
     const lastWeekStart = getWeekStart(new Date(year, month, numDays));
-    const weekKeys = [];
     for (let d = new Date(firstWeekStart); d <= lastWeekStart; d.setDate(d.getDate() + 7)) {
         const key = dvFormatDate(d);
-        weekKeys.push(key);
         weeks[key] = { date: key, carbs: 0, glucoseSum: 0, glucoseCount: 0, weightSum: 0, weightCount: 0, waterSum: 0, waterCount: 0 };
     }
 
-    // Aggregate meals
     for (const meal of data.meals) {
         const key = dvFormatDate(getWeekStart(new Date(meal.meal_time)));
-        if (weeks[key]) {
-            weeks[key].carbs += Number(meal.estimated_carbohydrate_g) || 0;
-        }
+        if (weeks[key]) weeks[key].carbs += Number(meal.estimated_carbohydrate_g) || 0;
     }
-
-    // Aggregate glucose
     for (const g of data.glucose) {
         const key = dvFormatDate(getWeekStart(new Date(g.measured_at)));
-        if (weeks[key]) {
-            weeks[key].glucoseSum += Number(g.glucose_mmol_l) || 0;
-            weeks[key].glucoseCount++;
-        }
+        if (weeks[key]) { weeks[key].glucoseSum += Number(g.glucose_mmol_l) || 0; weeks[key].glucoseCount++; }
     }
-
-    // Aggregate weight
     for (const w of data.weights) {
         const key = dvFormatDate(getWeekStart(new Date(w.measured_at)));
-        if (weeks[key]) {
-            weeks[key].weightSum += Number(w.weight_kg) || 0;
-            weeks[key].weightCount++;
-        }
+        if (weeks[key]) { weeks[key].weightSum += Number(w.weight_kg) || 0; weeks[key].weightCount++; }
     }
-
-    // Aggregate water
     for (const wi of data.water) {
         const key = dvFormatDate(getWeekStart(new Date(wi.consumed_at)));
-        if (weeks[key]) {
-            weeks[key].waterSum += Number(wi.amount_ml) || 0;
-            weeks[key].waterCount++;
-        }
+        if (weeks[key]) { weeks[key].waterSum += Number(wi.amount_ml) || 0; weeks[key].waterCount++; }
     }
 
     return Object.values(weeks);
 }
 
 /* ------------------------------------------------------------------ */
-/* SVG chart builders                                                  */
+/* SVG chart builders — day view style with dots and connecting lines  */
 /* ------------------------------------------------------------------ */
 
-function buildBarChart(values, labels, color, unit, maxVal) {
+const CHART_COLORS = { carbs: 'var(--dv-lane-food)', glucose: 'var(--dv-lane-glucose)', weight: 'var(--dv-lane-weight)', water: 'var(--dv-lane-water)' };
+
+function buildTrendChart(values, labels, type, unit) {
     if (!values.length) return '<p class="muted">No data</p>';
-    const w = 600, h = 120, pad = 24;
+    const w = 600, h = 140, pad = 30;
     const chartW = w - pad * 2;
     const chartH = h - pad * 2;
-    const barW = Math.max(4, (chartW / values.length) - 4);
-    const max = maxVal || Math.max(...values, 1);
-
-    let bars = '';
-    let xLabels = '';
-    for (let i = 0; i < values.length; i++) {
-        const v = values[i];
-        const barH = (v / max) * chartH;
-        const x = pad + (i * (chartW / values.length)) + 2;
-        const y = pad + chartH - barH;
-        bars += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="2" opacity="0.8"><title>${labels[i]}: ${v.toFixed(1)} ${unit}</title></rect>`;
-        if (values.length <= 7 || i % Math.ceil(values.length / 7) === 0) {
-            xLabels += `<text x="${x + barW / 2}" y="${h - 4}" text-anchor="middle" font-size="9" fill="var(--m)">${labels[i]}</text>`;
-        }
-    }
-
-    // Y-axis line
-    const axisY = pad + chartH;
-    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">
-        <line x1="${pad}" y1="${axisY}" x2="${w - pad}" y2="${axisY}" stroke="var(--b)" stroke-width="1"/>
-        ${bars}${xLabels}
-    </svg>`;
-}
-
-function buildLineChart(values, labels, color, unit, maxVal) {
-    if (!values.length) return '<p class="muted">No data</p>';
-    const w = 600, h = 120, pad = 24;
-    const chartW = w - pad * 2;
-    const chartH = h - pad * 2;
-    const max = maxVal || Math.max(...values, 1);
+    const max = Math.max(...values, 1);
+    const min = Math.min(...values, 0);
+    const range = max - min || 1;
 
     let points = '';
+    let dots = '';
     let xLabels = '';
     for (let i = 0; i < values.length; i++) {
         const v = values[i];
         const x = pad + (i / Math.max(1, values.length - 1)) * chartW;
-        const y = pad + chartH - (v / max) * chartH;
+        const y = pad + chartH - ((v - min) / range) * chartH;
         points += (i === 0 ? 'M' : 'L') + `${x},${y}`;
+        dots += `<circle cx="${x}" cy="${y}" r="4" fill="${CHART_COLORS[type]}" stroke="#fff" stroke-width="1.5"><title>${labels[i]}: ${v.toFixed(1)} ${unit}</title></circle>`;
         if (values.length <= 7 || i % Math.ceil(values.length / 7) === 0) {
-            xLabels += `<text x="${x}" y="${h - 4}" text-anchor="middle" font-size="9" fill="var(--m)">${labels[i]}</text>`;
+            xLabels += `<text x="${x}" y="${h - 6}" text-anchor="middle" font-size="9" fill="var(--m)">${labels[i]}</text>`;
         }
     }
 
     const axisY = pad + chartH;
     return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">
         <line x1="${pad}" y1="${axisY}" x2="${w - pad}" y2="${axisY}" stroke="var(--b)" stroke-width="1"/>
-        <path d="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        ${xLabels}
+        <path d="${points}" fill="none" stroke="${CHART_COLORS[type]}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+        ${dots}${xLabels}
     </svg>`;
 }
 
@@ -328,12 +249,12 @@ function renderInsights() {
 
     const data = insightsState.data;
     if (!data) {
-        container.innerHTML = '<div class="dv-empty">Loading...</div>';
+        container.innerHTML = '<div class="dv-empty">No data available. Make sure you are signed in and have recorded data.</div>';
         return;
     }
 
     const days = isWeek ? aggregateByDay(data) : aggregateByWeek(data);
-    const labels = days.map(d => isWeek ? d.date.slice(5) : d.date.slice(5));
+    const labels = days.map(d => d.date.slice(5));
     const carbs = days.map(d => d.carbs);
     const glucose = days.map(d => d.glucoseCount > 0 ? d.glucoseSum / d.glucoseCount : 0);
     const weight = days.map(d => d.weightCount > 0 ? d.weightSum / d.weightCount : 0);
@@ -352,30 +273,45 @@ function renderInsights() {
         <div class="insights-charts">
             <div class="card">
                 <h3>🍽️ Carbs (g)</h3>
-                ${buildBarChart(carbs, labels, 'var(--dv-lane-food)', 'g')}
+                ${buildTrendChart(carbs, labels, 'carbs', 'g')}
             </div>
             <div class="card">
                 <h3>🩸 Glucose (mmol/L)</h3>
-                ${buildLineChart(glucose, labels, 'var(--dv-lane-glucose)', 'mmol/L')}
+                ${buildTrendChart(glucose, labels, 'glucose', 'mmol/L')}
             </div>
             <div class="card">
                 <h3>⚖️ Weight (kg)</h3>
-                ${buildLineChart(weight, labels, 'var(--dv-lane-weight)', 'kg')}
+                ${buildTrendChart(weight, labels, 'weight', 'kg')}
             </div>
             <div class="card">
                 <h3>💧 Water (ml)</h3>
-                ${buildBarChart(water, labels, 'var(--dv-lane-water)', 'ml')}
+                ${buildTrendChart(water, labels, 'water', 'ml')}
             </div>
         </div>
     `;
 }
 
 /* ------------------------------------------------------------------ */
-/* Data loading                                                        */
+/* Data loading with retry                                             */
 /* ------------------------------------------------------------------ */
 
 async function loadInsights() {
     insightsState.loading = true;
+    renderInsights();
+
+    // Wait for supabaseClient and user to be available
+    let attempts = 0;
+    while ((!supabaseClient || !user) && attempts < 30) {
+        await new Promise(r => setTimeout(r, 500));
+        attempts++;
+    }
+
+    if (!supabaseClient || !user) {
+        insightsState.loading = false;
+        renderInsights();
+        return;
+    }
+
     const data = await fetchInsightsData();
     insightsState.data = data;
     insightsState.loading = false;
@@ -408,7 +344,6 @@ function installInsightsView() {
     const container = $('insightsView');
     if (!container) return;
 
-    // Mode toggle
     const modeToggle = $('insightsModeToggle');
     if (modeToggle) {
         modeToggle.addEventListener('click', () => {
@@ -418,12 +353,10 @@ function installInsightsView() {
         });
     }
 
-    // Navigation
     const prevBtn = $('insightsPrev');
     const nextBtn = $('insightsNext');
     if (prevBtn) prevBtn.addEventListener('click', insightsPrev);
     if (nextBtn) nextBtn.addEventListener('click', insightsNext);
 
-    // Initial load
     loadInsights();
 }
