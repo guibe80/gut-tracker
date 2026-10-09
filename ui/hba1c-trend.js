@@ -17,18 +17,18 @@
  *   - supabaseClient, user  (auth state)
  */
 
-// Weight factor for each timing type. Higher = more representative of
-// baseline glucose (closer to what HbA1c reflects).
+// All readings weighted equally — HbA1c reflects total glucose exposure
+// including post-meal spikes, so timing-based de-weighting underestimates.
 const TIMING_WEIGHTS = {
-    fasting: 1.5,
-    before_meal: 1.5,
+    fasting: 1.0,
+    before_meal: 1.0,
     bedtime: 1.0,
     random: 1.0,
     other: 1.0,
-    '30_min_after': 0.5,
-    '1_hour_after': 0.3,
-    '2_hours_after': 0.2,
-    '3_hours_after': 0.5,
+    '30_min_after': 1.0,
+    '1_hour_after': 1.0,
+    '2_hours_after': 1.0,
+    '3_hours_after': 1.0,
 };
 
 // Default weight when timing is undefined or unknown.
@@ -87,7 +87,7 @@ function renderHbA1c(data) {
         const result = calculate(data.filter(r => new Date(r.measured_at) >= cutoff));
         return `<div class="metricbox"><div class="muted">${p.label}</div><div class="metric">${result ? fmtEstimate(result.hba1c) : '—'}</div><div class="muted">${result ? `avg ${result.avg.toFixed(1)} mmol/L · n=${result.n}` : 'Not enough data'}</div></div>`;
     }).join('');
-    return `<h2>🩸 Estimated HbA1c trend</h2><p class="muted">Calculated from your recorded spot glucose readings using the ADAG glucose-to-HbA1c relationship (HbA1c = (mean_glucose mg/dL + 46.7) / 28.7). Fasting and pre-meal readings are weighted more heavily. This is an estimate, not a laboratory HbA1c result.</p><div class="metrics">${rows}</div><p class="muted" style="margin-top:10px">Use the 8–12 week estimates for trend interpretation; a single week's readings are much less reliable.</p>`;
+    return `<h2>🩸 Estimated HbA1c trend</h2><p class="muted">Calculated from your recorded spot glucose readings using the ADAG glucose-to-HbA1c relationship (HbA1c = (mean_glucose mg/dL + 46.7) / 28.7). All readings are weighted equally. This is an estimate, not a laboratory HbA1c result.</p><div class="metrics">${rows}</div><p class="muted" style="margin-top:10px">Use the 8–12 week estimates for trend interpretation; a single week's readings are much less reliable.</p>`;
 }
 
 // Install the HbA1c trend card into the Insights pane.
