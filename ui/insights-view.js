@@ -3,12 +3,14 @@
  *
  * Weekly and Monthly insights view with trends.
  * Shows: total carbs, average glucose, weight average, water average.
- * Uses simple SVG charts with dots connected by lines — day view style.
+ * Uses Chart.js line charts with emoji markers.
  *
  * Depends on globals from utils/ and services/ (loaded via <script> tags):
  *   - supabaseClient, user            (set up by index.html)
  *   - $, esc, fmt, localIso          (utils/html.js, utils/datetime.js)
  *   - dvFormatDate, dvParseDate      (utils/datetime.js)
+ *   - Chart                           (Chart.js CDN)
+ *   - createChartConfig, createEmojiChart, destroyChart  (js/chartjs-config.js)
  */
 
 /* ------------------------------------------------------------------ */
@@ -244,126 +246,111 @@ function aggregateByWeek(data) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Chart builders — matches Daily View style with emoji markers,        */
-/* hover popups, dotted connecting lines, and Y-axis labels            */
+/* Chart builders — Chart.js line charts with emoji markers,            */
+/* hover tooltips, dotted connecting lines, and axis labels           */
 /* ------------------------------------------------------------------ */
-
 const CHART_ICONS = { carbs: '🍽️', glucose: '🩸', weight: '⚖️', water: '💧' };
 const CHART_COLORS = { carbs: 'var(--dv-lane-food)', glucose: 'var(--dv-lane-glucose)', weight: 'var(--dv-lane-weight)', water: 'var(--dv-lane-water)' };
 
-function buildTrendChart(values, labels, type, unit, explicitDates) {
-    if (!values.length) return '<p class="muted">No data</p>';
+/* ------------------------------------------------------------------ */
+/* Chart instance storage for lifecycle management                     */
+/* ------------------------------------------------------------------ */
 
-    const validPoints = [];
-    for (let i = 0; i < values.length; i++) {
-        const v = values[i];
-        if (v == null || v === '' || v === undefined) continue;
-        const num = Number(v);
-        if (!Number.isFinite(num) || num <= 0) continue;
-        validPoints.push({ value: num, label: labels[i], labelDate: explicitDates && explicitDates[i] ? explicitDates[i] : labels[i], index: i });
-    }
+var insightsCharts = {};
+var insightsChartConfigs = {};
 
-    if (!validPoints.length) return '<p class="muted">No data</p>';
-
-    const max = Math.max(...validPoints.map(p => p.value));
-    const min = Math.min(...validPoints.map(p => p.value), 0);
-    const range = max - min || 1;
-
-    const fullDateValues = Array.isArray(explicitDates)
-        ? explicitDates
-              .map(dateValue => {
-                  if (!dateValue) return null;
-                  const candidate = typeof dateValue === 'string' ? dateValue : String(dateValue);
-                  const parsed = new Date(candidate);
-                  return Number.isNaN(parsed.getTime()) ? null : parsed;
-              })
-              .filter(Boolean)
-        : [];
-
-    const dateValues = fullDateValues.length ? fullDateValues : validPoints
-        .map(p => {
-            if (!p.labelDate) return null;
-            const candidate = typeof p.labelDate === 'string' ? p.labelDate : String(p.labelDate);
-            if (!candidate) return null;
-            const parsed = new Date(candidate);
-            return Number.isNaN(parsed.getTime()) ? null : parsed;
-        })
-        .filter(Boolean);
-
-    const domainStart = dateValues.length ? new Date(Math.min(...dateValues.map(d => d.getTime()))) : null;
-    const domainEnd = dateValues.length ? new Date(Math.max(...dateValues.map(d => d.getTime()))) : null;
-    const domainSpan = domainEnd && domainStart ? Math.max(1, domainEnd.getTime() - domainStart.getTime()) : 0;
-
-    const points = validPoints.map((p, i) => {
-        const hasDate = p.labelDate && domainStart && domainEnd;
-        const x = hasDate
-            ? ((new Date(p.labelDate).getTime() - domainStart.getTime()) / domainSpan) * 100
-            : (i / Math.max(1, validPoints.length - 1)) * 100;
-        return {
-            x,
-            y: ((p.value - min) / range) * 100,
-            value: p.value,
-            label: p.label,
-            labelDate: p.labelDate
-        };
+function destroyInsightsCharts() {
+    Object.keys(insightsCharts).forEach(function(key) {
+        if (typeof destroyChart === 'function') {
+            destroyChart(insightsCharts[key]);
+        } else if (insightsCharts[key] && typeof insightsCharts[key].destroy === 'function') {
+            insightsCharts[key].destroy();
+        }
+        delete insightsCharts[key];
     });
+    insightsChartConfigs = {};
+}
 
-    const yTicks = [];
-    const numTicks = 4;
-    for (let i = 0; i <= numTicks; i++) {
-        const v = min + (range * i / numTicks);
-        yTicks.push({ value: v, pct: (i / numTicks) * 100 });
+function initInsightsCharts() {
+    if (typeof createChartConfig !== 'function' || typeof createEmojiChart !== 'function') return;
+
+    Object.keys(insightsChartConfigs).forEach(function(canvasId) {
+        var config = insightsChartConfigs[canvasId];
+        var canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        var chartConfig = createChartConfig({
+            data: {
+                labels: config.labels,
+                datasets: [{
+                    data: config.values,
+                    emoji: config.emoji,
+                    borderColor: config.color,
+                    backgroundColor: config.color,
+                }]
+            },
+            yTitle: config.unit,
+            getLabel: function(tooltip) {
+                if (!tooltip.dataPoints || !tooltip.dataPoints.length) return '';
+                var idx = tooltip.dataPoints[0].dataIndex;
+                return config.labels[idx] || '';
+            },
+            getDetail: function(tooltip) {
+                if (!tooltip.dataPoints || !tooltip.dataPoints.length) return '';
+                var idx = tooltip.dataPoints[0].dataIndex;
+                var val = config.values[idx];
+                if (val == null) return '';
+                return Number(val).toFixed(1) + ' ' + config.unit;
+            },
+        });
+
+        var chart = createEmojiChart(canvas, chartConfig);
+        if (chart) {
+            insightsCharts[canvasId] = chart;
+        }
+    });
+}
+
+/**
+ * Filter out null/undefined/empty/zero/non-finite values from a data array,
+ * keeping labels aligned. Returns { labels: [...], values: [...] }.
+ */
+function filterChartData(values, labels) {
+    var filteredLabels = [];
+    var filteredValues = [];
+    for (var i = 0; i < values.length; i++) {
+        var v = values[i];
+        if (v == null || v === '' || v === undefined) continue;
+        var num = Number(v);
+        if (!Number.isFinite(num) || num <= 0) continue;
+        filteredValues.push(num);
+        filteredLabels.push(labels[i] || '');
     }
+    return { labels: filteredLabels, values: filteredValues };
+}
 
-    const svgW = 600, svgH = 120, padY = 10;
-    const chartW = svgW;
-    const chartH = svgH - padY * 2;
-    const lines = [];
-    for (let i = 1; i < points.length; i++) {
-        const prev = points[i - 1];
-        const curr = points[i];
-        const x1 = (prev.x / 100) * chartW;
-        const y1 = padY + chartH - (prev.y / 100) * chartH;
-        const x2 = (curr.x / 100) * chartW;
-        const y2 = padY + chartH - (curr.y / 100) * chartH;
-        lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${CHART_COLORS[type]}" stroke-width="2" opacity="0.5" stroke-dasharray="4 2"/>`);
-    }
-    const trendSvg = `<svg class="chart-trend" viewBox="0 0 ${svgW} ${svgH}" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1">${lines.join('')}</svg>`;
+function buildTrendChart(values, labels, type, unit, explicitDates) {
+    // Filter out null/undefined/empty/zero values
+    var filtered = filterChartData(values, labels);
+    if (!filtered.values.length) return '<p class="muted">No data</p>';
 
-    const markers = points.map(p => `
-        <div class="chart-event" data-type="${type}" style="left:${p.x}%;bottom:${p.y}%"
-             title="${safeEsc(p.label)}: ${p.value.toFixed(1)} ${unit}">
-            ${CHART_ICONS[type]}
-            <div class="chart-popup">${safeEsc(p.label)}: ${p.value.toFixed(1)} ${unit}</div>
-        </div>
-    `).join('');
+    // Generate a unique canvas ID for this chart instance
+    var canvasId = 'insightsChart-' + type + '-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
 
-    const yAxisLabels = yTicks.map(t =>
-        `<span style="bottom:${t.pct}%">${t.value.toFixed(0)}</span>`
-    ).join('');
+    // Store config for deferred chart creation (after DOM insertion)
+    insightsChartConfigs[canvasId] = {
+        labels: filtered.labels,
+        values: filtered.values,
+        emoji: CHART_ICONS[type] || '●',
+        color: CHART_COLORS[type] || '#999',
+        unit: unit,
+    };
 
-    const xAxisLabels = labels.map((l, i) => {
-        if (!labels.length || (!explicitDates && labels.length > 7 && i % Math.ceil(labels.length / 7) !== 0)) return '';
-        const pointIndex = validPoints.findIndex(p => p.index === i);
-        const xPct = pointIndex >= 0 ? points[pointIndex].x : (i / Math.max(1, labels.length - 1)) * 100;
-        return `<span style="left:${xPct}%">${safeEsc(l)}</span>`;
-    }).join('');
-
-    return `
-        <div class="chart-container">
-            <div class="chart-yaxis">
-                ${yAxisLabels}
-                <span class="chart-yaxis-label" style="right: 1px;">${unit}</span>
-            </div>
-            <div class="chart-plot">
-                <div class="chart-plot-inner">
-                    ${trendSvg}
-                    ${markers}
-                </div>
-            </div>
-            <div class="chart-xaxis"><div class="chart-xaxis-inner">${xAxisLabels}</div></div>
-        </div>
-    `;
+    return '<div class="chart-container">' +
+        '<div class="chart-plot" style="position:relative;height:120px;">' +
+        '<canvas id="' + canvasId + '" style="width:100%;height:100%;display:block;"></canvas>' +
+        '</div>' +
+        '</div>';
 }
 
 /* ------------------------------------------------------------------ */
@@ -408,6 +395,9 @@ function renderInsights() {
 
     syncInsightsModeToggle();
 
+    // Destroy old charts before replacing DOM
+    destroyInsightsCharts();
+
     const data = insightsState.data;
     if (!data) {
         container.innerHTML = '<div class="dv-empty">No data available. Make sure you are signed in and have recorded data.</div>';
@@ -451,6 +441,9 @@ function renderInsights() {
             </div>
         </div>
     `;
+
+    // Initialize charts after DOM insertion
+    initInsightsCharts();
 }
 
 /* ------------------------------------------------------------------ */
