@@ -178,40 +178,77 @@ function aggregateByWeek(data) {
 }
 
 /* ------------------------------------------------------------------ */
-/* SVG chart builders — day view style with dots and connecting lines  */
+/* Chart builders — matches Daily View style with emoji markers,        */
+/* hover popups, dotted connecting lines, and Y-axis labels            */
 /* ------------------------------------------------------------------ */
 
+const CHART_ICONS = { carbs: '🍽️', glucose: '🩸', weight: '⚖️', water: '💧' };
 const CHART_COLORS = { carbs: 'var(--dv-lane-food)', glucose: 'var(--dv-lane-glucose)', weight: 'var(--dv-lane-weight)', water: 'var(--dv-lane-water)' };
 
 function buildTrendChart(values, labels, type, unit) {
     if (!values.length) return '<p class="muted">No data</p>';
-    const w = 600, h = 140, pad = 30;
-    const chartW = w - pad * 2;
-    const chartH = h - pad * 2;
+
     const max = Math.max(...values, 1);
     const min = Math.min(...values, 0);
     const range = max - min || 1;
 
-    let points = '';
-    let dots = '';
-    let xLabels = '';
-    for (let i = 0; i < values.length; i++) {
-        const v = values[i];
-        const x = pad + (i / Math.max(1, values.length - 1)) * chartW;
-        const y = pad + chartH - ((v - min) / range) * chartH;
-        points += (i === 0 ? 'M' : 'L') + `${x},${y}`;
-        dots += `<circle cx="${x}" cy="${y}" r="4" fill="${CHART_COLORS[type]}" stroke="#fff" stroke-width="1.5"><title>${labels[i]}: ${v.toFixed(1)} ${unit}</title></circle>`;
-        if (values.length <= 7 || i % Math.ceil(values.length / 7) === 0) {
-            xLabels += `<text x="${x}" y="${h - 6}" text-anchor="middle" font-size="9" fill="var(--m)">${labels[i]}</text>`;
-        }
+    // Calculate positions as percentages (0-100)
+    const points = values.map((v, i) => ({
+        x: (i / Math.max(1, values.length - 1)) * 100,
+        y: ((v - min) / range) * 100,
+        value: v,
+        label: labels[i]
+    }));
+
+    // Build Y-axis ticks (4 intervals = 5 labels)
+    const yTicks = [];
+    const numTicks = 4;
+    for (let i = 0; i <= numTicks; i++) {
+        const v = min + (range * i / numTicks);
+        yTicks.push({ value: v, pct: (i / numTicks) * 100 });
     }
 
-    const axisY = pad + chartH;
-    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">
-        <line x1="${pad}" y1="${axisY}" x2="${w - pad}" y2="${axisY}" stroke="var(--b)" stroke-width="1"/>
-        <path d="${points}" fill="none" stroke="${CHART_COLORS[type]}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
-        ${dots}${xLabels}
-    </svg>`;
+    // Build SVG dotted lines connecting consecutive points (day view style)
+    const lines = [];
+    for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        lines.push(`<line x1="${prev.x}%" y1="${100 - prev.y}%" x2="${curr.x}%" y2="${100 - curr.y}%" stroke="${CHART_COLORS[type]}" stroke-width="2" opacity="0.35" stroke-dasharray="4 2"/>`);
+    }
+    const trendSvg = `<svg class="chart-trend" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1">${lines.join('')}</svg>`;
+
+    // Build emoji markers with hover popups (day view style)
+    const markers = points.map(p => `
+        <div class="chart-event" data-type="${type}" style="left:${p.x}%;bottom:${p.y}%"
+             title="${esc(p.label)}: ${p.value.toFixed(1)} ${unit}">
+            ${CHART_ICONS[type]}
+            <div class="chart-popup">${esc(p.label)}: ${p.value.toFixed(1)} ${unit}</div>
+        </div>
+    `).join('');
+
+    // Build Y-axis labels
+    const yAxisLabels = yTicks.map(t =>
+        `<span style="bottom:${t.pct}%">${t.value.toFixed(0)}</span>`
+    ).join('');
+
+    // Build X-axis labels (show all if <= 7, otherwise sample)
+    const xAxisLabels = labels.map((l, i) => {
+        if (labels.length <= 7 || i % Math.ceil(labels.length / 7) === 0) {
+            return `<span style="left:${(i / Math.max(1, labels.length - 1)) * 100}%">${esc(l)}</span>`;
+        }
+        return '';
+    }).join('');
+
+    return `
+        <div class="chart-container">
+            <div class="chart-yaxis">${yAxisLabels}<span class="chart-yaxis-label">${unit}</span></div>
+            <div class="chart-plot">
+                ${trendSvg}
+                ${markers}
+            </div>
+            <div class="chart-xaxis">${xAxisLabels}</div>
+        </div>
+    `;
 }
 
 /* ------------------------------------------------------------------ */

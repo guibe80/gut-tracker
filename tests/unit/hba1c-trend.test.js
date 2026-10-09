@@ -19,9 +19,9 @@ const { toMmolMol, fmtEstimate, calculate, renderHbA1c, installHbA1cTrend, timin
 
 describe('timingWeight', () => {
     test('returns correct weight for known timings', () => {
-        assert.strictEqual(timingWeight('fasting'), 1.5);
-        assert.strictEqual(timingWeight('before_meal'), 1.5);
-        assert.strictEqual(timingWeight('2_hours_after'), 0.2);
+        assert.strictEqual(timingWeight('fasting'), 1.0);
+        assert.strictEqual(timingWeight('before_meal'), 1.0);
+        assert.strictEqual(timingWeight('2_hours_after'), 1.0);
     });
 
     test('returns default weight for unknown timing', () => {
@@ -94,19 +94,19 @@ describe('calculate', () => {
             { glucose_mmol_l: 8.0, timing: '2_hours_after' }
         ]);
         assert.ok(result);
-        // weighted avg = (5.0*1.5 + 8.0*0.2) / (1.5+0.2) = 5.353...
-        assert.strictEqual(result.avg, (5.0*1.5 + 8.0*0.2) / (1.5 + 0.2));
+        // equal weight: (5.0 + 8.0) / 2 = 6.5
+        assert.strictEqual(result.avg, (5.0 + 8.0) / 2);
         assert.strictEqual(result.n, 2);
     });
 
-    test('fasting readings dominate weighted average', () => {
+    test('all readings weighted equally', () => {
         const result = calculate([
-            { glucose_mmol_l: 10.0, timing: '2_hours_after' },   // weight 0.2
-            { glucose_mmol_l: 5.0, timing: 'fasting' },           // weight 1.5
+            { glucose_mmol_l: 10.0, timing: '2_hours_after' },
+            { glucose_mmol_l: 5.0, timing: 'fasting' },
         ]);
         assert.ok(result);
-        // weighted avg = (10*0.2 + 5*1.5) / (0.2+1.5) = (2 + 7.5) / 1.7 = 5.71
-        assert.ok(result.avg < 6.0, 'fasting reading should pull average toward 5.0');
+        // equal weight: (10 + 5) / 2 = 7.5
+        assert.strictEqual(result.avg, 7.5);
     });
 
     test('filters out invalid values', () => {
@@ -157,9 +157,9 @@ describe('renderHbA1c', () => {
         assert.ok(html.includes('ADAG glucose-to-HbA1c relationship'));
     });
 
-    test('mentions timing-based weighting', () => {
+    test('mentions equal weighting', () => {
         const html = renderHbA1c([]);
-        assert.ok(html.includes('weighted'));
+        assert.ok(html.includes('weighted equally'));
     });
 });
 
