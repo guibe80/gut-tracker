@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Insights mock</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <script src="../utils/datetime.js"></script>
+    <script src="../utils/html.js"></script>
+    <script src="../ui/insights-view.js"></script>
+</head>
+<body>
+    <main>
+        <div id="app">
+            <section id="insights" class="pane" style="display:block">
+                <div id="insightsView"></div>
+            </section>
+        </div>
+    </main>
+    <script>
+        function $(id) { return document.getElementById(id); }
+
+        function mockWeekData() {
+            const start = getWeekStart(new Date());
+            const meals = [], glucose = [], weights = [], water = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(start);
+                d.setDate(d.getDate() + i);
+                d.setHours(12, 0, 0, 0);
+                const iso = d.toISOString();
+                meals.push({ meal_time: iso, estimated_carbohydrate_g: 40 + i * 12 });
+                glucose.push({ measured_at: iso, glucose_mmol_l: 5.2 + i * 0.4 });
+                weights.push({ measured_at: iso, weight_kg: 81.4 - i * 0.1 });
+                water.push({ consumed_at: iso, amount_ml: 1200 + i * 150 });
+            }
+            return { meals, glucose, weights, water, mealFoods: [] };
+        }
+
+        insightsState.mode = 'week';
+        insightsState.weekOffset = 0;
+        insightsState.data = mockWeekData();
+        renderInsights();
+    </script>
+</body>
+</html>
