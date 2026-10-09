@@ -201,14 +201,14 @@
         .insights-nav { padding: 4px 12px; border: 1px solid var(--b); border-radius: 6px; background: #fff; cursor: pointer; font-size: 14px; }
         .insights-nav:hover { background: #f5f7f6; }
         .insights-nav:disabled { opacity: 0.4; cursor: default; }
-        .insights-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
+        .insights-charts { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
         .insights-charts .card h3 { margin: 0 0 10px; font-size: 14px; }
 
         /* Chart components — match Daily View style */
-        .chart-container { position: relative; padding-left: 40px; }
-        .chart-yaxis { position: absolute; left: 0; top: 0; bottom: 18px; width: 36px; }
-        .chart-yaxis span { position: absolute; right: 4px; font-size: 9px; color: var(--m); transform: translateY(50%); }
-        .chart-yaxis-label { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 9px; color: var(--m); }
+        .chart-container { position: relative; padding-left: 56px; }
+        .chart-yaxis { position: absolute; left: 0; top: 0; bottom: 18px; width: 50px; }
+        .chart-yaxis span { position: absolute; right: 0; font-size: 9px; color: var(--m); transform: translateY(50%); text-align: right; }
+        .chart-yaxis-label { position: absolute; right: 1px; top: 50%; transform: translateY(-50%); font-size: 9px; color: var(--m); }
         .chart-plot { position: relative; height: 120px; border-bottom: 1px solid var(--b); }
         .chart-xaxis { position: relative; height: 16px; margin-top: 2px; }
         .chart-xaxis span { position: absolute; transform: translateX(-50%); font-size: 9px; color: var(--m); }

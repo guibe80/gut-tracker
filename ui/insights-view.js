@@ -27,6 +27,12 @@ let insightsState = {
 /* Date helpers                                                        */
 /* ------------------------------------------------------------------ */
 
+function getLocalDateKey(value) {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return dvFormatDate(d);
+}
+
 function getWeekStart(date) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
@@ -43,6 +49,12 @@ function getMonthStart(date) {
 
 function getDaysInMonth(year, month) {
     return new Date(year, month + 1, 0).getDate();
+}
+
+function syncInsightsModeToggle() {
+    const toggle = $('insightsModeToggle');
+    if (!toggle) return;
+    toggle.textContent = insightsState.mode === 'week' ? '📅 Monthly' : '📅 Weekly';
 }
 
 /* ------------------------------------------------------------------ */
@@ -117,64 +129,66 @@ function aggregateByDay(data) {
     for (let i = 0; i < 7; i++) {
         const d = new Date(weekStart);
         d.setDate(d.getDate() + i);
-        const key = dvFormatDate(d);
+        const key = getLocalDateKey(d);
         days[key] = { date: key, carbs: 0, glucoseSum: 0, glucoseCount: 0, weightSum: 0, weightCount: 0, waterSum: 0, waterCount: 0 };
     }
 
-    for (const meal of data.meals) {
-        const key = dvFormatDate(new Date(meal.meal_time));
+    for (const meal of data.meals || []) {
+        const key = getLocalDateKey(meal.meal_time);
         if (days[key]) days[key].carbs += Number(meal.estimated_carbohydrate_g) || 0;
     }
-    for (const g of data.glucose) {
-        const key = dvFormatDate(new Date(g.measured_at));
+    for (const g of data.glucose || []) {
+        const key = getLocalDateKey(g.measured_at);
         if (days[key]) { days[key].glucoseSum += Number(g.glucose_mmol_l) || 0; days[key].glucoseCount++; }
     }
-    for (const w of data.weights) {
-        const key = dvFormatDate(new Date(w.measured_at));
+    for (const w of data.weights || []) {
+        const key = getLocalDateKey(w.measured_at);
         if (days[key]) { days[key].weightSum += Number(w.weight_kg) || 0; days[key].weightCount++; }
     }
-    for (const wi of data.water) {
-        const key = dvFormatDate(new Date(wi.consumed_at));
+    for (const wi of data.water || []) {
+        const key = getLocalDateKey(wi.consumed_at);
         if (days[key]) { days[key].waterSum += Number(wi.amount_ml) || 0; days[key].waterCount++; }
     }
 
     return Object.values(days);
 }
 
-function aggregateByWeek(data) {
-    const weeks = {};
-    const now = new Date();
-    const monthStart = getMonthStart(now);
+function aggregateByMonth(data) {
+    const monthStart = getMonthStart(new Date());
     monthStart.setMonth(monthStart.getMonth() + insightsState.monthOffset);
     const year = monthStart.getFullYear();
     const month = monthStart.getMonth();
-    const numDays = getDaysInMonth(year, month);
+    const totalDays = getDaysInMonth(year, month);
+    const monthBuckets = {};
 
-    const firstWeekStart = getWeekStart(new Date(year, month, 1));
-    const lastWeekStart = getWeekStart(new Date(year, month, numDays));
-    for (let d = new Date(firstWeekStart); d <= lastWeekStart; d.setDate(d.getDate() + 7)) {
-        const key = dvFormatDate(d);
-        weeks[key] = { date: key, carbs: 0, glucoseSum: 0, glucoseCount: 0, weightSum: 0, weightCount: 0, waterSum: 0, waterCount: 0 };
-    }
-
-    for (const meal of data.meals) {
-        const key = dvFormatDate(getWeekStart(new Date(meal.meal_time)));
-        if (weeks[key]) weeks[key].carbs += Number(meal.estimated_carbohydrate_g) || 0;
-    }
-    for (const g of data.glucose) {
-        const key = dvFormatDate(getWeekStart(new Date(g.measured_at)));
-        if (weeks[key]) { weeks[key].glucoseSum += Number(g.glucose_mmol_l) || 0; weeks[key].glucoseCount++; }
-    }
-    for (const w of data.weights) {
-        const key = dvFormatDate(getWeekStart(new Date(w.measured_at)));
-        if (weeks[key]) { weeks[key].weightSum += Number(w.weight_kg) || 0; weeks[key].weightCount++; }
-    }
-    for (const wi of data.water) {
-        const key = dvFormatDate(getWeekStart(new Date(wi.consumed_at)));
-        if (weeks[key]) { weeks[key].waterSum += Number(wi.amount_ml) || 0; weeks[key].waterCount++; }
+    for (let day = 1; day <= totalDays; day++) {
+        const d = new Date(year, month, day);
+        const key = getLocalDateKey(d);
+        monthBuckets[key] = { date: key, carbs: 0, glucoseSum: 0, glucoseCount: 0, weightSum: 0, weightCount: 0, waterSum: 0, waterCount: 0 };
     }
 
-    return Object.values(weeks);
+    for (const meal of data.meals || []) {
+        const key = getLocalDateKey(meal.meal_time);
+        if (monthBuckets[key]) monthBuckets[key].carbs += Number(meal.estimated_carbohydrate_g) || 0;
+    }
+    for (const g of data.glucose || []) {
+        const key = getLocalDateKey(g.measured_at);
+        if (monthBuckets[key]) { monthBuckets[key].glucoseSum += Number(g.glucose_mmol_l) || 0; monthBuckets[key].glucoseCount++; }
+    }
+    for (const w of data.weights || []) {
+        const key = getLocalDateKey(w.measured_at);
+        if (monthBuckets[key]) { monthBuckets[key].weightSum += Number(w.weight_kg) || 0; monthBuckets[key].weightCount++; }
+    }
+    for (const wi of data.water || []) {
+        const key = getLocalDateKey(wi.consumed_at);
+        if (monthBuckets[key]) { monthBuckets[key].waterSum += Number(wi.amount_ml) || 0; monthBuckets[key].waterCount++; }
+    }
+
+    return Object.values(monthBuckets);
+}
+
+function aggregateByWeek(data) {
+    return aggregateByMonth(data);
 }
 
 /* ------------------------------------------------------------------ */
@@ -261,7 +275,10 @@ function buildTrendChart(values, labels, type, unit) {
 
     return `
         <div class="chart-container">
-            <div class="chart-yaxis">${yAxisLabels}<span class="chart-yaxis-label">${unit}</span></div>
+            <div class="chart-yaxis">
+                ${yAxisLabels}
+                <span class="chart-yaxis-label" style="right: 1px;">${unit}</span>
+            </div>
             <div class="chart-plot">
                 ${trendSvg}
                 ${markers}
@@ -304,13 +321,15 @@ function renderInsights() {
         ? (insightsState.weekOffset === 0 ? 'This week' : insightsState.weekOffset === -1 ? 'Last week' : `${-insightsState.weekOffset} weeks ago`)
         : (insightsState.monthOffset === 0 ? 'This month' : insightsState.monthOffset === -1 ? 'Last month' : `${-insightsState.monthOffset} months ago`);
 
+    syncInsightsModeToggle();
+
     const data = insightsState.data;
     if (!data) {
         container.innerHTML = '<div class="dv-empty">No data available. Make sure you are signed in and have recorded data.</div>';
         return;
     }
 
-    const days = isWeek ? aggregateByDay(data) : aggregateByWeek(data);
+    const days = isWeek ? aggregateByDay(data) : aggregateByMonth(data);
     const labels = days.map(d => d.date.slice(5));
     const carbs = days.map(d => d.carbs);
     const glucose = days.map(d => d.glucoseCount > 0 ? d.glucoseSum / d.glucoseCount : 0);
@@ -412,10 +431,11 @@ function installInsightsView() {
             insightsNext();
         } else if (target.id === 'insightsModeToggle') {
             insightsState.mode = insightsState.mode === 'week' ? 'month' : 'week';
-            target.textContent = insightsState.mode === 'week' ? '📅 Monthly' : '📅 Weekly';
+            syncInsightsModeToggle();
             loadInsights();
         }
     });
 
+    syncInsightsModeToggle();
     loadInsights();
 }
