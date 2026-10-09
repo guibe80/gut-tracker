@@ -191,6 +191,19 @@
         .dayview .dv-event[data-dv-type="weight"] { background: var(--dv-lane-weight); color: #fff; }
         .dayview .dv-event[data-dv-type="water"] { background: var(--dv-lane-water); color: #fff; }
 
+        /* Insights view */
+        .insights-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+        .insights-mode-btn { padding: 6px 14px; border: 1px solid var(--b); border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; }
+        .insights-mode-btn:hover { background: #f5f7f6; }
+        .insights-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+        .insights-header h2 { margin: 0; }
+        .insights-controls { display: flex; align-items: center; gap: 10px; }
+        .insights-nav { padding: 4px 12px; border: 1px solid var(--b); border-radius: 6px; background: #fff; cursor: pointer; font-size: 14px; }
+        .insights-nav:hover { background: #f5f7f6; }
+        .insights-nav:disabled { opacity: 0.4; cursor: default; }
+        .insights-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
+        .insights-charts .card h3 { margin: 0 0 10px; font-size: 14px; }
+
         .dayview .dv-event-popup {
             position: absolute;
             bottom: calc(100% + 8px);

@@ -25,6 +25,7 @@
     <script src="./ui/hba1c-trend.js"></script>
     <script src="./ui/timing-utils.js"></script>
     <script src="./ui/water-intake.js"></script>
+    <script src="./ui/insights-view.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
@@ -338,7 +339,11 @@
                 </div>
             </section>
             <section id="insights" class="pane hidden">
-                <div class="card">
+                <div class="insights-toolbar">
+                    <button type="button" id="insightsModeToggle" class="insights-mode-btn">📅 Monthly</button>
+                </div>
+                <div id="insightsView"></div>
+                <div class="card" style="display:none">
                     <h2>📊 Overview</h2>
                     <div class="metrics">
                         <div class="metricbox">
@@ -409,6 +414,7 @@
         bindFormHandlers();
         bindEventHandlers();
         installHbA1cTrend();
+        installInsightsView();
         initWaterIntake();
     </script>
 </body>
