@@ -1,7 +1,7 @@
 # Gut + Glucose Tracker — Makefile
 # Repeatable dev checks
 
-.PHONY: check check-js check-html check-git help serve smoke test test-unit
+.PHONY: check check-js check-html check-git help serve smoke test test-unit merge-main
 
 help:
 	@echo "Available targets:"
@@ -54,3 +54,14 @@ test-unit:
 	@echo "Running unit tests..."
 	@node --test tests/unit/*.test.js
 	@echo "Unit tests passed."
+
+## Merging to main when completed
+merge-main:
+	@BRANCH=$$(git branch --show-current); \
+	if [ "$$BRANCH" = "main" ]; then \
+		echo "Error: Already on main."; exit 1; \
+	fi; \
+	git switch main && \
+	git pull --ff-only origin main && \
+	git merge --no-ff "$$BRANCH" && \
+	git push origin main
