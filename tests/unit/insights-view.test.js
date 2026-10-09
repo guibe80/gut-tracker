@@ -67,10 +67,16 @@ describe('insights month aggregation', () => {
 
 describe('insights chart rendering', () => {
     test('uses dotted connecting lines and day-view aligned y-axis label positioning', () => {
-        const html = vm.runInContext("buildTrendChart([5, 6, 7], ['01', '02', '03'], 'glucose', 'mmol/L')", sandbox);
+        const html = vm.runInContext("buildTrendChart([5, 6, 7], ['04-Oct', '05-Oct', '06-Oct'], 'glucose', 'mmol/L')", sandbox);
         assert.match(html, /stroke-dasharray="4 2"/);
         assert.match(html, /right:\s*1px/);
         assert.match(html, /chart-yaxis-label/);
+        assert.match(html, /04-Oct/);
+    });
+
+    test('formats daily x-axis labels as DD-MMM', () => {
+        assert.equal(vm.runInContext("formatInsightAxisLabel('2024-10-04')", sandbox), '04-Oct');
+        assert.equal(vm.runInContext("formatInsightAxisLabel('2024-12-31')", sandbox), '31-Dec');
     });
 
     test('toggles the mode when the actual insights mode button is clicked', () => {

@@ -53,6 +53,15 @@ function getMonthStart(date) {
     return d;
 }
 
+function formatInsightAxisLabel(value) {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    return `${day}-${month}`;
+}
+
 function getDaysInMonth(year, month) {
     return new Date(year, month + 1, 0).getDate();
 }
@@ -333,19 +342,12 @@ function buildTrendChart(values, labels, type, unit, explicitDates) {
         `<span style="bottom:${t.pct}%">${t.value.toFixed(0)}</span>`
     ).join('');
 
-    const xAxisDebug = [];
     const xAxisLabels = labels.map((l, i) => {
         if (!labels.length || (!explicitDates && labels.length > 7 && i % Math.ceil(labels.length / 7) !== 0)) return '';
         const pointIndex = validPoints.findIndex(p => p.index === i);
         const xPct = pointIndex >= 0 ? points[pointIndex].x : (i / Math.max(1, labels.length - 1)) * 100;
-        // #region agent log
-        xAxisDebug.push({ i, label: String(l), xPct, pointIndex, looksMmDd: /^\d{2}-\d{2}$/.test(String(l)) });
-        // #endregion
         return `<span style="left:${xPct}%">${safeEsc(l)}</span>`;
     }).join('');
-    // #region agent log
-    fetch('http://127.0.0.1:7936/ingest/5672652d-1828-4c2a-9076-54ffbb51ad6a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c3a5ed'},body:JSON.stringify({sessionId:'c3a5ed',runId:'pre-fix',hypothesisId:'B',location:'ui/insights-view.js:buildTrendChart',message:'x-axis label percents',data:{type,labelCount:labels.length,firstPct:xAxisDebug[0]&&xAxisDebug[0].xPct,lastPct:xAxisDebug.length?xAxisDebug[xAxisDebug.length-1].xPct:null,labels:xAxisDebug},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     return `
         <div class="chart-container">
@@ -411,11 +413,8 @@ function renderInsights() {
     }
 
     const days = isWeek ? aggregateByDay(data) : aggregateByMonth(data);
-    const labels = days.map(d => d.label || d.date.slice(5));
+    const labels = days.map(d => d.label || formatInsightAxisLabel(d.date));
     const dates = days.map(d => d.date);
-    // #region agent log
-    fetch('http://127.0.0.1:7936/ingest/5672652d-1828-4c2a-9076-54ffbb51ad6a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c3a5ed'},body:JSON.stringify({sessionId:'c3a5ed',runId:'pre-fix',hypothesisId:'A',location:'ui/insights-view.js:renderInsights',message:'label source vs locale',data:{mode:insightsState.mode,rawDates:dates,renderedLabels:labels,slice5:dates.map(d=>d&&d.slice(5)),ddMmm:dates.map(d=>{const p=d?new Date(d+'T00:00:00'):null;return p&&!Number.isNaN(p.getTime())?p.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):null;})},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const carbs = days.map(d => d.carbs);
     const glucose = days.map(d => d.glucoseCount > 0 ? d.glucoseSum / d.glucoseCount : 0);
     const weight = days.map(d => d.weightCount > 0 ? d.weightSum / d.weightCount : 0);
@@ -450,22 +449,6 @@ function renderInsights() {
             </div>
         </div>
     `;
-    // #region agent log
-    if (container && typeof container.querySelector === 'function') {
-        const xaxis = container.querySelector('.chart-xaxis');
-        const xaxisCs = xaxis && typeof getComputedStyle === 'function' ? getComputedStyle(xaxis) : null;
-        const spans = xaxis ? Array.from(xaxis.querySelectorAll('span')) : [];
-        const xRect = xaxis ? xaxis.getBoundingClientRect() : null;
-        const overflow = spans.map(s => {
-            const r = s.getBoundingClientRect();
-            return { text: s.textContent, left: r.left, right: r.right, width: r.width, height: r.height, overflowLeft: xRect ? r.left < xRect.left : null, overflowRight: xRect ? r.right > xRect.right : null, wraps: r.height > 16 };
-        });
-        fetch('http://127.0.0.1:7936/ingest/5672652d-1828-4c2a-9076-54ffbb51ad6a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c3a5ed'},body:JSON.stringify({sessionId:'c3a5ed',runId:'pre-fix',hypothesisId:'C',location:'ui/insights-view.js:renderInsights:dom',message:'xaxis overflow geometry',data:{xaxisWidth:xRect&&xRect.width,xaxisHeight:xRect&&xRect.height,whiteSpace:xaxisCs&&xaxisCs.whiteSpace,overflowX:xaxisCs&&xaxisCs.overflowX,spanCount:spans.length,anyOverflowLeft:overflow.some(o=>o.overflowLeft),anyOverflowRight:overflow.some(o=>o.overflowRight),anyWrap:overflow.some(o=>o.wraps),overflow},timestamp:Date.now()})}).catch(()=>{});
-        const plot = container.querySelector('.chart-plot');
-        const plotRect = plot ? plot.getBoundingClientRect() : null;
-        fetch('http://127.0.0.1:7936/ingest/5672652d-1828-4c2a-9076-54ffbb51ad6a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c3a5ed'},body:JSON.stringify({sessionId:'c3a5ed',runId:'pre-fix',hypothesisId:'D',location:'ui/insights-view.js:renderInsights:align',message:'plot vs xaxis alignment',data:{plotLeft:plotRect&&plotRect.left,plotRight:plotRect&&plotRect.right,plotWidth:plotRect&&plotRect.width,xaxisLeft:xRect&&xRect.left,xaxisRight:xRect&&xRect.right,xaxisWidth:xRect&&xRect.width,misaligned:plotRect&&xRect?Math.abs(plotRect.left-xRect.left)>1:null},timestamp:Date.now()})}).catch(()=>{});
-    }
-    // #endregion
 }
 
 /* ------------------------------------------------------------------ */
