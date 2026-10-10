@@ -366,16 +366,14 @@ function buildSummaryCards(days, isWeek) {
     const avgWeight = isWeek
         ? days.reduce((s, d) => s + d.weightSum, 0) / Math.max(1, days.reduce((s, d) => s + d.weightCount, 0))
         : days.reduce((s, d) => s + (d.weightCount ? d.weightSum / d.weightCount : 0), 0) / Math.max(1, days.length);
-    const avgWater = isWeek
-        ? days.reduce((s, d) => s + d.waterSum, 0) / Math.max(1, days.reduce((s, d) => s + d.waterCount, 0))
-        : days.reduce((s, d) => s + (d.waterCount ? d.waterSum / d.waterCount : 0), 0) / Math.max(1, days.length);
+    const totalWater = days.reduce((s, d) => s + d.waterSum, 0);
     const daysWithData = days.filter(d => d.carbs > 0 || d.glucoseCount > 0 || d.weightCount > 0 || d.waterCount > 0).length;
 
     return `<div class="metrics">
         <div class="metricbox"><div class="muted">${isWeek ? 'Total Carbs' : 'Avg Carbs / day'}</div><div class="metric">${avgCarbs.toFixed(0)}g</div><div class="muted">${daysWithData} ${isWeek ? 'days' : 'weeks'} with data</div></div>
         <div class="metricbox"><div class="muted">Avg Glucose</div><div class="metric">${avgGlucose.toFixed(1)}</div><div class="muted">mmol/L</div></div>
         <div class="metricbox"><div class="muted">Avg Weight</div><div class="metric">${avgWeight.toFixed(1)}</div><div class="muted">kg</div></div>
-        <div class="metricbox"><div class="muted">Avg Water</div><div class="metric">${avgWater.toFixed(0)}</div><div class="muted">ml/day</div></div>
+        <div class="metricbox"><div class="muted">Total Water</div><div class="metric">${totalWater.toFixed(0)}</div><div class="muted">ml</div></div>
     </div>`;
 }
 
@@ -410,7 +408,7 @@ function renderInsights() {
     const carbs = days.map(d => d.carbs);
     const glucose = days.map(d => d.glucoseCount > 0 ? d.glucoseSum / d.glucoseCount : 0);
     const weight = days.map(d => d.weightCount > 0 ? d.weightSum / d.weightCount : 0);
-    const water = days.map(d => d.waterCount > 0 ? d.waterSum / d.waterCount : 0);
+    const water = days.map(d => d.waterSum || 0);
 
     container.innerHTML = `
         <div class="insights-header">
@@ -436,7 +434,7 @@ function renderInsights() {
                 ${buildTrendChart(weight, labels, 'weight', 'kg', dates)}
             </div>
             <div class="card">
-                <h3>💧 Water (ml)</h3>
+                <h3>💧 Total Water (ml)</h3>
                 ${buildTrendChart(water, labels, 'water', 'ml', dates)}
             </div>
         </div>
