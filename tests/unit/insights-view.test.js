@@ -8,10 +8,12 @@ const path = require('path');
 const vm = require('vm');
 
 const datetimeCode = fs.readFileSync(path.resolve(__dirname, '../../utils/datetime.js'), 'utf8');
+const chartConfigCode = fs.readFileSync(path.resolve(__dirname, '../../ui/chartjs-config.js'), 'utf8');
 const insightsCode = fs.readFileSync(path.resolve(__dirname, '../../ui/insights-view.js'), 'utf8');
 
 const sandbox = {
     console,
+    Chart: { register() {} },
     supabaseClient: null,
     user: null,
     esc: (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'),
@@ -21,6 +23,7 @@ const sandbox = {
 
 vm.createContext(sandbox);
 vm.runInContext(datetimeCode, sandbox);
+vm.runInContext(chartConfigCode, sandbox);
 vm.runInContext(insightsCode, sandbox);
 
 describe('insights month aggregation', () => {
@@ -66,6 +69,26 @@ describe('insights month aggregation', () => {
 });
 
 describe('insights chart rendering', () => {
+    test('uses shared chart typography and keeps gridlines without axis baselines', () => {
+        const config = vm.runInContext(`createChartConfig({
+            xScale: { type: 'linear', ticks: { callback: value => value } },
+            yScale: { display: false }
+        })`, sandbox);
+        const xAxis = config.options.scales.x;
+        const yAxis = config.options.scales.y;
+
+        assert.equal(config.options.font.size, 9);
+        assert.equal(config.options.color, '#61716b');
+        assert.equal(xAxis.ticks.font.size, 9);
+        assert.equal(xAxis.grid.display, true);
+        assert.equal(yAxis.grid.color, xAxis.grid.color);
+        assert.equal(xAxis.border.display, false);
+        assert.equal(yAxis.display, false);
+        assert.equal(typeof xAxis.ticks.callback, 'function');
+        assert.equal(config.options.plugins.tooltip.enabled, false);
+        assert.equal(typeof config.options.plugins.tooltip.external, 'function');
+    });
+
     test('renders canvas element for Chart.js', () => {
         const html = vm.runInContext("buildTrendChart([5, 6, 7], ['04-Oct', '05-Oct', '06-Oct'], 'glucose', 'mmol/L')", sandbox);
         assert.match(html, /<canvas/);

@@ -10,7 +10,7 @@
  *   - $, esc, fmt, localIso          (utils/html.js, utils/datetime.js)
  *   - dvFormatDate, dvParseDate      (utils/datetime.js)
  *   - Chart                           (Chart.js CDN)
- *   - createChartConfig, createEmojiChart, destroyChart  (js/chartjs-config.js)
+ *   - createChartConfig, createEmojiChart, destroyChart  (ui/chartjs-config.js)
  */
 
 /* ------------------------------------------------------------------ */
@@ -347,7 +347,7 @@ function buildTrendChart(values, labels, type, unit, explicitDates) {
     };
 
     return '<div class="chart-container">' +
-        '<div class="chart-plot" style="position:relative;height:120px;">' +
+        '<div class="chart-plot">' +
         '<canvas id="' + canvasId + '" style="width:100%;height:100%;display:block;"></canvas>' +
         '</div>' +
         '</div>';
