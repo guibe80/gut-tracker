@@ -143,7 +143,9 @@ function createChartConfig(options = {}) {
                     tension: 0
                 },
                 point: {
-                    radius: 0
+                    radius: 0,
+                    hoverRadius: 0,
+                    hitRadius: 12
                 }
             },
             plugins: {

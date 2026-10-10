@@ -13,6 +13,7 @@ const path = require('path');
 const vm = require('vm');
 
 const filesToLoad = [
+    path.resolve(__dirname, '../../ui/chartjs-config.js'),
     path.resolve(__dirname, '../../utils/datetime.js'),
     path.resolve(__dirname, '../../utils/supabase-helpers.js'),
     path.resolve(__dirname, '../../utils/validation.js'),
@@ -33,6 +34,7 @@ const sandbox = {
         addEventListener: () => {},
     },
     window: {},
+    Chart: { register: () => {} },
     console,
 };
 
@@ -42,9 +44,68 @@ vm.runInContext(code, sandbox);
 // Set dvState from within the VM context (let bindings can't be overridden
 // from the host side — must use runInContext to reassign)
 vm.runInContext(
-    "dvState = { date: '2025-01-15', toggles: { food: true, glucose: true, gut: true, bowel: true, weight: true }, data: null, loading: false };",
+    "dvState = { date: '2025-01-15', toggles: { food: true, glucose: true, gut: true, bowel: true, weight: true, water: true }, data: null, loading: false };",
     sandbox
 );
+
+describe('Day View chart interactions', () => {
+    test('positions the now indicator using the current x-scale and chart bounds', () => {
+        const now = new Date('2025-01-15T12:00:00.000Z');
+        let receivedValue;
+        const chart = {
+            scales: { x: { getPixelForValue(value) { receivedValue = value; return 180; } } },
+            chartArea: { left: 20, right: 300 },
+            canvas: { getBoundingClientRect: () => ({ left: 120 }) },
+        };
+        const container = { getBoundingClientRect: () => ({ left: 100 }) };
+
+        assert.equal(sandbox.dvGetNowIndicatorPosition(chart, now, container), 200);
+        assert.equal(receivedValue, now.getTime());
+        assert.equal(sandbox.dvGetNowIndicatorPosition({ ...chart, chartArea: { left: 20, right: 100 } }, now, container), null);
+    });
+
+    test('recalculates the now position on each chart layout', () => {
+        const originalDollar = sandbox.$;
+        const originalQuerySelector = sandbox.document.querySelector;
+        const originalDate = vm.runInContext('dvState.date', sandbox);
+        const indicator = { style: { display: 'none' } };
+        const container = { getBoundingClientRect: () => ({ left: 100 }) };
+        let scaleX = 80;
+        sandbox.$ = id => id === 'dvLanes' ? container : null;
+        sandbox.document.querySelector = selector => selector === '.dv-now' ? indicator : null;
+        sandbox.chartRef = {
+            canvas: { id: 'dv-chart-food', getBoundingClientRect: () => ({ left: 120 }) },
+            chartArea: { left: 0, right: 300 },
+            scales: { x: { getPixelForValue: () => scaleX } },
+        };
+
+        try {
+            vm.runInContext("dvState.date = dvFormatDate(new Date()); dvNowChartType = 'food'; dvNowIndicatorPlugin.afterLayout(chartRef)", sandbox);
+            assert.equal(indicator.style.left, '100px');
+            assert.equal(indicator.style.display, '');
+
+            scaleX = 130;
+            vm.runInContext('dvNowIndicatorPlugin.afterLayout(chartRef)', sandbox);
+            assert.equal(indicator.style.left, '150px');
+        } finally {
+            sandbox.$ = originalDollar;
+            sandbox.document.querySelector = originalQuerySelector;
+            vm.runInContext(`dvState.date = '${originalDate}'`, sandbox);
+            delete sandbox.chartRef;
+        }
+    });
+
+    test('keeps emoji markers visible as overlays while enabling point hit detection', () => {
+        const config = sandbox.createChartConfig();
+        assert.equal(config.options.elements.point.radius, 0);
+        assert.equal(config.options.elements.point.hoverRadius, 0);
+        assert.ok(config.options.elements.point.hitRadius >= 12);
+    });
+
+    test('includes the food value alongside its label in tooltip details', () => {
+        assert.equal(sandbox.dvGetEventTooltipDetail('food', { detail: 'Oats', value: 42 }), 'Oats · 42g carbs');
+    });
+});
 
 describe('dvGetEvents', () => {
     test('returns empty array for null data', () => {
