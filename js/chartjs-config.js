@@ -63,7 +63,7 @@ function createChartConfig(options = {}) {
                 y: {
                     beginAtZero: true,
                     title: {
-                        display: true,
+                        display: opts.yTitle ? true : false,
                         text: opts.yTitle || ''
                     },
                     ...(opts.yScale || {})

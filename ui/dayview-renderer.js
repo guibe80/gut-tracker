@@ -126,23 +126,47 @@ function dvGetYAxisRange(type, events, yaxis) {
     return { yMin, yMax };
 }
 
-function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart) {
+function dvGetSharedTimeWindow(data) {
+    if (!data) return null;
+    const allEvents = [
+        ...(data.meals || []),
+        ...(data.glucose || []),
+        ...(data.symptoms || []),
+        ...(data.bowels || []),
+        ...(data.weights || []),
+        ...(data.waterIntake || [])
+    ];
+
+    let earliest = null;
+    for (const event of allEvents) {
+        const t = new Date(event.meal_time || event.measured_at || event.occurred_at || event.consumed_at).getTime();
+        if (!isNaN(t) && (!earliest || t < earliest)) earliest = t;
+    }
+
+    if (!earliest) return null;
+
+    const dayEnd = dvDayEnd(dvState.date).getTime();
+    return { start: earliest, end: dayEnd };
+}
+
+function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart, timeWindow) {
     const canvas = document.getElementById(`dv-chart-${type}`);
     if (!canvas) return null;
 
     const labels = events.map(e => dvFormatHour(dvPercentThrough(dayStart, e.t)));
-    const values = events.map(e => {
-        if (type === 'gut' || type === 'bowel') return 0.5;
-        return e.value || 0;
-    });
 
     const hasYAxis = yaxis && yMin !== undefined && yMax !== undefined && yMax > yMin;
+    const xMin = timeWindow ? timeWindow.start : dayStart.getTime();
+    const xMax = timeWindow ? timeWindow.end : dvDayEnd(dvState.date).getTime();
 
     const chartConfig = createChartConfig({
         data: {
             labels: labels,
             datasets: [{
-                data: values,
+                data: events.map(e => ({
+                    x: new Date(e.t).getTime(),
+                    y: type === 'gut' || type === 'bowel' ? 0.5 : (e.value || 0)
+                })),
                 emoji: DV_LANE_ICON[type],
                 borderColor: `var(--dv-lane-${type})`,
                 backgroundColor: `var(--dv-lane-${type})`,
@@ -159,10 +183,17 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart) {
         },
         xScale: {
             display: true,
+            type: 'linear',
+            min: xMin,
+            max: xMax,
             ticks: {
                 autoSkip: true,
                 maxRotation: 0,
                 font: { size: 9 },
+                callback: function(value) {
+                    const d = new Date(value);
+                    return dvFormatHour(dvPercentThrough(dayStart, d.toISOString()));
+                }
             },
             grid: {
                 display: false,
@@ -188,9 +219,8 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart) {
 function dvBuild() {
     const elTimeline = $('dvTimeline');
     const elToggles = $('dvToggles');
-    const elTimeAxis = $('dvTimeAxis');
     const elLanes = $('dvLanes');
-    if (!elTimeline || !elToggles || !elTimeAxis || !elLanes) return;
+    if (!elTimeline || !elToggles || !elLanes) return;
 
     // Destroy existing charts before rebuilding
     dvDestroyCharts();
@@ -204,15 +234,9 @@ function dvBuild() {
         `<button type="button" class="dv-toggle ${dvState.toggles[type] ? 'active' : ''}" data-dv-type="${type}">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</button>`
     ).join('');
 
-    // Build time axis
-    elTimeAxis.innerHTML = ['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00','24:00'].map((label, i) => {
-        const pct = i * 12.5;
-        const transform = i === 0 ? 'translateX(0)' : i === 8 ? 'translateX(-100%)' : 'translateX(-50%)';
-        return `<span style="position:absolute;left:${pct}%;transform:${transform}">${label}</span>`;
-    }).join('');
-
     const visibleTypes = DV_LANE_ORDER.filter(type => dvState.toggles[type]);
     const data = dvState.data;
+    const timeWindow = dvGetSharedTimeWindow(data);
     let html = '';
     let eventCount = 0;
 
@@ -277,7 +301,7 @@ function dvBuild() {
         const yaxis = YAXIS_RANGES[type];
         const range = dvGetYAxisRange(type, events, yaxis);
 
-        dvCharts[type] = dvCreateLaneChart(type, events, yaxis, range.yMin, range.yMax, dayStart);
+        dvCharts[type] = dvCreateLaneChart(type, events, yaxis, range.yMin, range.yMax, dayStart, timeWindow);
     }
 }
 

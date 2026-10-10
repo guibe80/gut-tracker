@@ -122,16 +122,6 @@
             margin-bottom: 14px;
         }
 
-        .dayview .dv-timeaxis {
-            position: relative;
-            height: 16px;
-            font-size: 11px;
-            color: var(--m);
-            padding: 0 2px 6px;
-            border-bottom: 1px solid var(--b);
-            margin-bottom: 14px;
-        }
-
         .dayview .dv-lanes {
             position: relative;
         }
