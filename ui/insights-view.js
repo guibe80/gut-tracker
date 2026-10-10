@@ -283,6 +283,7 @@ function initInsightsCharts() {
             data: {
                 labels: config.labels,
                 datasets: [{
+                    label: '',
                     data: config.values,
                     emoji: config.emoji,
                     borderColor: config.color,
@@ -293,7 +294,7 @@ function initInsightsCharts() {
             getLabel: function(tooltip) {
                 if (!tooltip.dataPoints || !tooltip.dataPoints.length) return '';
                 var idx = tooltip.dataPoints[0].dataIndex;
-                return config.labels[idx] || '';
+                return safeEsc(config.labels[idx] || '');
             },
             getDetail: function(tooltip) {
                 if (!tooltip.dataPoints || !tooltip.dataPoints.length) return '';
@@ -311,36 +312,35 @@ function initInsightsCharts() {
     });
 }
 
-/**
- * Filter out null/undefined/empty/zero/non-finite values from a data array,
- * keeping labels aligned. Returns { labels: [...], values: [...] }.
- */
-function filterChartData(values, labels) {
-    var filteredLabels = [];
-    var filteredValues = [];
+function buildTrendChart(values, labels, type, unit, explicitDates) {
+    // Keep all labels for consistent X-axis alignment across charts.
+    // Replace null/undefined/empty/zero with null (Chart.js renders as gap).
+    var chartValues = [];
     for (var i = 0; i < values.length; i++) {
         var v = values[i];
-        if (v == null || v === '' || v === undefined) continue;
+        if (v == null || v === '' || v === undefined) {
+            chartValues.push(null);
+            continue;
+        }
         var num = Number(v);
-        if (!Number.isFinite(num) || num <= 0) continue;
-        filteredValues.push(num);
-        filteredLabels.push(labels[i] || '');
+        if (!Number.isFinite(num) || num <= 0) {
+            chartValues.push(null);
+            continue;
+        }
+        chartValues.push(num);
     }
-    return { labels: filteredLabels, values: filteredValues };
-}
 
-function buildTrendChart(values, labels, type, unit, explicitDates) {
-    // Filter out null/undefined/empty/zero values
-    var filtered = filterChartData(values, labels);
-    if (!filtered.values.length) return '<p class="muted">No data</p>';
+    // Check if there's any valid data at all
+    var hasValidData = chartValues.some(function(v) { return v !== null; });
+    if (!hasValidData) return '<p class="muted">No data</p>';
 
     // Generate a unique canvas ID for this chart instance
     var canvasId = 'insightsChart-' + type + '-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
 
     // Store config for deferred chart creation (after DOM insertion)
     insightsChartConfigs[canvasId] = {
-        labels: filtered.labels,
-        values: filtered.values,
+        labels: labels,
+        values: chartValues,
         emoji: CHART_ICONS[type] || '●',
         color: CHART_COLORS[type] || '#999',
         unit: unit,
