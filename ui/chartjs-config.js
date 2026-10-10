@@ -8,6 +8,67 @@
 // Emoji Markers Plugin
 // ============================================================
 
+const CHART_THEME = {
+    font: {
+        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        size: 9,
+        color: '#61716b',
+        markerSize: 16
+    },
+    grid: {
+        color: 'rgba(97, 113, 107, 0.2)',
+        lineWidth: 1
+    },
+    spacing: {
+        padding: { top: 6, right: 8, bottom: 0, left: 0 }
+    },
+    tooltip: {
+        background: '#17221e',
+        color: '#fff',
+        padding: '6px 9px',
+        borderRadius: '6px',
+        fontSize: '11px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+    }
+};
+
+function getChartScaleDefaults() {
+    const tickFont = { family: CHART_THEME.font.family, size: CHART_THEME.font.size };
+    const gridStyle = { color: CHART_THEME.grid.color, lineWidth: CHART_THEME.grid.lineWidth };
+
+    return {
+        x: {
+            type: 'category',
+            grid: { ...gridStyle, display: true },
+            border: { display: false },
+            ticks: {
+                autoSkip: true,
+                maxRotation: 0,
+                color: CHART_THEME.font.color,
+                font: tickFont
+            }
+        },
+        y: {
+            beginAtZero: true,
+            grid: gridStyle,
+            border: { display: false },
+            ticks: {
+                color: CHART_THEME.font.color,
+                font: tickFont
+            }
+        }
+    };
+}
+
+function mergeChartScaleOptions(defaults, overrides) {
+    const scale = { ...defaults, ...overrides };
+    ['grid', 'border', 'ticks'].forEach(key => {
+        scale[key] = { ...defaults[key], ...(overrides[key] || {}) };
+    });
+    scale.ticks.font = { ...defaults.ticks.font, ...(overrides.ticks?.font || {}) };
+    return scale;
+}
+
 const emojiMarkersPlugin = {
     id: 'emojiMarkers',
     afterDatasetsDraw(chart) {
@@ -23,7 +84,7 @@ const emojiMarkersPlugin = {
 
                 const { x, y } = point.getProps(['x', 'y']);
                 ctx.save();
-                ctx.font = '16px serif';
+                ctx.font = `${CHART_THEME.font.markerSize}px serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(emoji, x, y);
@@ -44,6 +105,9 @@ if (typeof Chart !== 'undefined') {
 
 function createChartConfig(options = {}) {
     const opts = options || {};
+    const yScale = opts.yScale || {};
+    const scaleDefaults = getChartScaleDefaults();
+
     return {
         type: 'line',
         data: {
@@ -53,24 +117,23 @@ function createChartConfig(options = {}) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            legend: { display: false },
-        tooltips: { enabled: false },
+            font: {
+                family: CHART_THEME.font.family,
+                size: CHART_THEME.font.size
+            },
+            color: CHART_THEME.font.color,
+            layout: CHART_THEME.spacing,
             scales: {
-                x: {
-                    type: 'category',
-                    ticks: {
-                        autoSkip: true,
-                        maxRotation: 0
-                    },
-                    ...(opts.xScale || {})
-                },
+                x: mergeChartScaleOptions(scaleDefaults.x, opts.xScale || {}),
                 y: {
-                    beginAtZero: true,
+                    ...mergeChartScaleOptions(scaleDefaults.y, yScale),
                     title: {
                         display: opts.yTitle ? true : false,
-                        text: opts.yTitle || ''
+                        text: opts.yTitle || '',
+                        color: CHART_THEME.font.color,
+                        font: { family: CHART_THEME.font.family, size: CHART_THEME.font.size },
+                        ...(yScale.title || {})
                     },
-                    ...(opts.yScale || {})
                 }
             },
             elements: {
@@ -84,7 +147,13 @@ function createChartConfig(options = {}) {
                 }
             },
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: false,
+                    labels: {
+                        color: CHART_THEME.font.color,
+                        font: { family: CHART_THEME.font.family, size: CHART_THEME.font.size }
+                    }
+                },
                 tooltip: {
                     enabled: false,
                     external: createExternalTooltipHandler(opts.getLabel, opts.getDetail)
@@ -115,17 +184,18 @@ function createExternalTooltipHandler(getLabel, getDetail) {
             tooltipEl = document.createElement('div');
             tooltipEl.className = 'chartjs-tooltip';
             tooltipEl.style.position = 'absolute';
-            tooltipEl.style.background = '#17221e';
-            tooltipEl.style.color = '#fff';
-            tooltipEl.style.padding = '6px 9px';
-            tooltipEl.style.borderRadius = '6px';
-            tooltipEl.style.fontSize = '11px';
+            tooltipEl.style.background = CHART_THEME.tooltip.background;
+            tooltipEl.style.color = CHART_THEME.tooltip.color;
+            tooltipEl.style.padding = CHART_THEME.tooltip.padding;
+            tooltipEl.style.borderRadius = CHART_THEME.tooltip.borderRadius;
+            tooltipEl.style.fontFamily = CHART_THEME.font.family;
+            tooltipEl.style.fontSize = CHART_THEME.tooltip.fontSize;
             tooltipEl.style.pointerEvents = 'none';
             tooltipEl.style.opacity = '0';
             tooltipEl.style.transition = 'opacity 0.12s';
             tooltipEl.style.zIndex = '10';
             tooltipEl.style.whiteSpace = 'nowrap';
-            tooltipEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+            tooltipEl.style.boxShadow = CHART_THEME.tooltip.boxShadow;
             canvasParent.appendChild(tooltipEl);
         }
 

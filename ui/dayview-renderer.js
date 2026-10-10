@@ -20,7 +20,7 @@
  *   - dvState, DV_LANE_ORDER,          (module-level state)
  *     DV_LANE_LABEL, DV_LANE_ICON
  *
- * Depends on js/chartjs-config.js (loaded before this file):
+ * Depends on ui/chartjs-config.js (loaded before this file):
  *   - createChartConfig, createEmojiChart, destroyChart
  *
  * The dv* functions access shared globals ($ for DOM queries, supabaseClient,
@@ -188,16 +188,10 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart, timeWindow
             min: xMin,
             max: xMax,
             ticks: {
-                autoSkip: true,
-                maxRotation: 0,
-                font: { size: 9 },
                 callback: function(value) {
                     const d = new Date(value);
                     return dvFormatHour(dvPercentThrough(dayStart, d.toISOString()));
                 }
-            },
-            grid: {
-                display: false,
             },
         },
         getLabel: (tooltip) => {
