@@ -149,7 +149,7 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart) {
                 fill: false,
             }]
         },
-        yTitle: yaxis ? yaxis.label : '',
+        yTitle: (yaxis && yaxis.label) ? yaxis.label : '',
         yScale: hasYAxis ? {
             min: yMin,
             max: yMax,
@@ -158,7 +158,15 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart) {
             display: false,
         },
         xScale: {
-            display: false,
+            display: true,
+            ticks: {
+                autoSkip: true,
+                maxRotation: 0,
+                font: { size: 9 },
+            },
+            grid: {
+                display: false,
+            },
         },
         getLabel: (tooltip) => {
             const idx = tooltip.dataPoints?.[0]?.dataIndex ?? 0;

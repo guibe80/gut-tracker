@@ -138,7 +138,7 @@
 
         .dayview .dv-lane {
             position: relative;
-            height: 38px;
+            height: 60px;
             margin: 6px 0;
             border-radius: 6px;
             border: 1px dashed var(--b);
