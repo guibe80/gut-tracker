@@ -66,12 +66,23 @@ describe('insights month aggregation', () => {
 });
 
 describe('insights chart rendering', () => {
-    test('uses dotted connecting lines and day-view aligned y-axis label positioning', () => {
+    test('renders canvas element for Chart.js', () => {
         const html = vm.runInContext("buildTrendChart([5, 6, 7], ['04-Oct', '05-Oct', '06-Oct'], 'glucose', 'mmol/L')", sandbox);
-        assert.match(html, /stroke-dasharray="4 2"/);
-        assert.match(html, /right:\s*1px/);
-        assert.match(html, /chart-yaxis-label/);
-        assert.match(html, /04-Oct/);
+        assert.match(html, /<canvas/);
+        assert.match(html, /chart-container/);
+        assert.match(html, /chart-plot/);
+    });
+
+    test('filters out null/undefined/empty/zero values', () => {
+        const html = vm.runInContext("buildTrendChart([0, null, 5, '', 7], ['01-Oct', '02-Oct', '03-Oct', '04-Oct', '05-Oct'], 'glucose', 'mmol/L')", sandbox);
+        assert.match(html, /<canvas/);
+        // Should still render since there are valid values (5, 7)
+        assert.doesNotMatch(html, /No data/);
+    });
+
+    test('shows No data message when all values are invalid', () => {
+        const html = vm.runInContext("buildTrendChart([0, null, ''], ['01-Oct', '02-Oct', '03-Oct'], 'glucose', 'mmol/L')", sandbox);
+        assert.match(html, /No data/);
     });
 
     test('formats daily x-axis labels as DD-MMM', () => {

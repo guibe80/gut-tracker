@@ -3,6 +3,7 @@
  *
  * Day-view timeline renderer: fetches per-day data from Supabase,
  * transforms records into timeline events, and builds the DOM.
+ * Uses Chart.js for rendering charts in each lane.
  *
  * Depends on globals from utils/ and services/ (loaded via <script> tags):
  *   - supabaseClient, user            (set up by index.html)
@@ -19,6 +20,9 @@
  *   - dvState, DV_LANE_ORDER,          (module-level state)
  *     DV_LANE_LABEL, DV_LANE_ICON
  *
+ * Depends on js/chartjs-config.js (loaded before this file):
+ *   - createChartConfig, createEmojiChart, destroyChart
+ *
  * The dv* functions access shared globals ($ for DOM queries, supabaseClient,
  * user, dvState) via the shared script scope — same pattern as utils/.
  */
@@ -32,6 +36,9 @@ let dvState = { date: new Date().toISOString().slice(0, 10), toggles: { food: tr
 const DV_LANE_ORDER = ['food', 'glucose', 'gut', 'bowel', 'weight', 'water'];
 const DV_LANE_LABEL = { food: 'Food', glucose: 'Glucose', gut: 'Gut', bowel: 'Bowel', weight: 'Weight', water: 'Water' };
 const DV_LANE_ICON = { food: '🍽️', glucose: '🩸', gut: '🫃', bowel: '🚽', weight: '⚖️', water: '💧' };
+
+// Module-level chart instances for cleanup
+const dvCharts = {};
 
 /* ------------------------------------------------------------------ */
 /* Data fetching                                                        */
@@ -90,6 +97,83 @@ function dvGetEvents(data, type) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Chart helpers                                                        */
+/* ------------------------------------------------------------------ */
+
+function dvDestroyCharts() {
+    for (const type in dvCharts) {
+        if (dvCharts[type]) {
+            destroyChart(dvCharts[type]);
+            dvCharts[type] = null;
+        }
+    }
+}
+
+function dvGetYAxisRange(type, events, yaxis) {
+    let yMin, yMax;
+    if (!yaxis) return { yMin, yMax };
+
+    if (type === 'glucose') {
+        yMin = yaxis.min;
+        yMax = yaxis.max;
+    } else if (yaxis.maxOnly && events.length > 0) {
+        const vals = events.map(e => e.value).filter(v => typeof v === 'number' && Number.isFinite(v));
+        if (vals.length) { yMin = 0; yMax = Math.max(...vals); }
+    } else if (yaxis.auto && events.length > 0) {
+        const vals = events.map(e => e.value).filter(v => typeof v === 'number' && Number.isFinite(v));
+        if (vals.length) { yMin = type === 'food' ? 0 : Math.min(...vals) - 2; yMax = Math.max(...vals) + 2; }
+    }
+    return { yMin, yMax };
+}
+
+function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart) {
+    const canvas = document.getElementById(`dv-chart-${type}`);
+    if (!canvas) return null;
+
+    const labels = events.map(e => dvFormatHour(dvPercentThrough(dayStart, e.t)));
+    const values = events.map(e => {
+        if (type === 'gut' || type === 'bowel') return 0.5;
+        return e.value || 0;
+    });
+
+    const hasYAxis = yaxis && yMin !== undefined && yMax !== undefined && yMax > yMin;
+
+    const chartConfig = createChartConfig({
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                emoji: DV_LANE_ICON[type],
+                borderColor: `var(--dv-lane-${type})`,
+                backgroundColor: `var(--dv-lane-${type})`,
+                fill: false,
+            }]
+        },
+        yTitle: yaxis ? yaxis.label : '',
+        yScale: hasYAxis ? {
+            min: yMin,
+            max: yMax,
+            beginAtZero: type === 'food' || type === 'water' || type === 'gut' || type === 'bowel',
+        } : {
+            display: false,
+        },
+        xScale: {
+            display: false,
+        },
+        getLabel: (tooltip) => {
+            const idx = tooltip.dataPoints?.[0]?.dataIndex ?? 0;
+            return labels[idx] || '';
+        },
+        getDetail: (tooltip) => {
+            const idx = tooltip.dataPoints?.[0]?.dataIndex ?? 0;
+            return events[idx]?.detail || '';
+        }
+    });
+
+    return createEmojiChart(canvas, chartConfig);
+}
+
+/* ------------------------------------------------------------------ */
 /* DOM building                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -100,12 +184,19 @@ function dvBuild() {
     const elLanes = $('dvLanes');
     if (!elTimeline || !elToggles || !elTimeAxis || !elLanes) return;
 
+    // Destroy existing charts before rebuilding
+    dvDestroyCharts();
+
     const dayStart = dvDayStart(dvState.date);
     const now = new Date();
     const showNowLine = dvState.date === dvFormatDate(now);
 
-    elToggles.innerHTML = DV_LANE_ORDER.map(type => `<button type="button" class="dv-toggle ${dvState.toggles[type] ? 'active' : ''}" data-dv-type="${type}">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</button>`).join('');
+    // Build toggle buttons
+    elToggles.innerHTML = DV_LANE_ORDER.map(type =>
+        `<button type="button" class="dv-toggle ${dvState.toggles[type] ? 'active' : ''}" data-dv-type="${type}">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</button>`
+    ).join('');
 
+    // Build time axis
     elTimeAxis.innerHTML = ['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00','24:00'].map((label, i) => {
         const pct = i * 12.5;
         const transform = i === 0 ? 'translateX(0)' : i === 8 ? 'translateX(-100%)' : 'translateX(-50%)';
@@ -117,7 +208,12 @@ function dvBuild() {
     let html = '';
     let eventCount = 0;
 
-    const YAXIS_RANGES = { glucose: { min: 4, max: 15, label: 'mmol/L' }, weight: { auto: true, label: 'kg' }, food: { auto: true, label: 'g carbs' }, water: { maxOnly: true, label: 'ml' } };
+    const YAXIS_RANGES = {
+        glucose: { min: 4, max: 15, label: 'mmol/L' },
+        weight: { auto: true, label: 'kg' },
+        food: { auto: true, label: 'g carbs' },
+        water: { maxOnly: true, label: 'ml' }
+    };
 
     for (const type of visibleTypes) {
         const events = dvGetEvents(data, type);
@@ -127,61 +223,49 @@ function dvBuild() {
         const yaxis = YAXIS_RANGES[type];
         let laneClass = 'dv-lane';
         let yaxisHtml = '';
-        let trendHtml = '';
         let yMin, yMax;
 
         if (yaxis) {
             laneClass += ' has-yaxis';
-            if (type === 'glucose') {
-                yMin = yaxis.min; yMax = yaxis.max;
-            } else if (yaxis.maxOnly && events.length > 0) {
-                const vals = events.map(e => e.value).filter(v => typeof v === 'number' && Number.isFinite(v));
-                if (vals.length) { yMin = 0; yMax = Math.max(...vals); }
-            } else if (yaxis.auto && events.length > 0) {
-                const vals = events.map(e => e.value).filter(v => typeof v === 'number' && Number.isFinite(v));
-                if (vals.length) { yMin = type === 'food' ? 0 : Math.min(...vals) - 2; yMax = Math.max(...vals) + 2; }
-            }
+            const range = dvGetYAxisRange(type, events, yaxis);
+            yMin = range.yMin;
+            yMax = range.yMax;
+
             if (yMin !== undefined && yMax !== undefined && yMax > yMin) {
-                const range = yMax - yMin;
+                const rangeVal = yMax - yMin;
                 const ticks = yaxis.maxOnly ? [yMin, yMax] : (() => {
-                    const step = type === 'food' ? (range <= 50 ? 5 : 10) : (range <= 6 ? 1 : range <= 20 ? 2 : 5);
+                    const step = type === 'food' ? (rangeVal <= 50 ? 5 : 10) : (rangeVal <= 6 ? 1 : rangeVal <= 20 ? 2 : 5);
                     const t = [];
                     for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) t.push(v);
                     return t;
                 })();
                 yaxisHtml = `<div class="dv-yaxis">${ticks.map(v => { const pct = ((v - yMin) / (yMax - yMin)) * 100; return `<span style="bottom:${pct}%">${Number.isInteger(v) ? v : v.toFixed(1)}</span>`; }).join('')}</div><span class="dv-yaxis-label">${yaxis.label || ''}</span>`;
-                if (events.length > 1) {
-                    const lines = [];
-                    for (let i = 1; i < events.length; i++) {
-                        const prev = events[i - 1];
-                        const curr = events[i];
-                        const prevPct = dvPercentThrough(dayStart, prev.t);
-                        const currPct = dvPercentThrough(dayStart, curr.t);
-                        const prevV = ((prev.value - yMin) / (yMax - yMin)) * 100;
-                        const currV = ((curr.value - yMin) / (yMax - yMin)) * 100;
-                        lines.push(`<line x1="${prevPct * 100}%" y1="${100 - prevV}%" x2="${currPct * 100}%" y2="${100 - currV}%" stroke="var(--dv-lane-${type})" stroke-width="2" opacity="0.35" stroke-dasharray="4 2"/>`);
-                    }
-                    trendHtml = `<svg class="dv-trend" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1">${lines.join('')}</svg>`;
-                }
             }
         }
 
-        const infoBadge = type === 'food' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-food)">${events.reduce((s,e) => s + (e.value || 0), 0).toFixed(0)}g carbs</div>` : type === 'glucose' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-glucose)">avg ${(events.reduce((s,e) => s + e.value, 0) / events.length).toFixed(1)}</div>` : type === 'water' && events.length ? `<div class="dv-info" style="background:var(--dv-lane-water)">${events.reduce((s,e) => s + e.value, 0).toFixed(0)} ml</div>` : '';
-        html += `<div class="${laneClass}" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px}">${trendHtml}${yaxisHtml}<span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>${infoBadge}`;
-        for (const e of events) {
-            const pct = dvPercentThrough(dayStart, e.t);
-            const leftPct = pct * 100;
-            const timeStr = dvFormatHour(pct);
-            let eventStyle = `left:${leftPct}%`;
-            if (yaxis && e.value !== undefined && Number.isFinite(e.value) && yMax > yMin) {
-                const vPct = ((e.value - yMin) / (yMax - yMin)) * 100;
-                eventStyle += `;bottom:${vPct}%`;
-            }
-            html += `<div class="dv-event${yaxis ? ' has-yaxis' : ''}" data-dv-type="${type}" data-dv-time="${esc(timeStr)}" data-dv-detail="${esc(e.detail || '')}" style="${eventStyle}" title="${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}">${DV_LANE_ICON[type]}<div class="dv-event-popup">${esc(timeStr)}${e.detail ? ' · ' + esc(e.detail) : ''}</div></div>`;
+        // Info badge
+        let infoBadge = '';
+        if (type === 'food' && events.length) {
+            infoBadge = `<div class="dv-info" style="background:var(--dv-lane-food)">${events.reduce((s,e) => s + (e.value || 0), 0).toFixed(0)}g carbs</div>`;
+        } else if (type === 'glucose' && events.length) {
+            infoBadge = `<div class="dv-info" style="background:var(--dv-lane-glucose)">avg ${(events.reduce((s,e) => s + e.value, 0) / events.length).toFixed(1)}</div>`;
+        } else if (type === 'water' && events.length) {
+            infoBadge = `<div class="dv-info" style="background:var(--dv-lane-water)">${events.reduce((s,e) => s + e.value, 0).toFixed(0)} ml</div>`;
         }
-        html += '</div>';
+
+        const chartWrapStyle = yaxis ? 'position:absolute;top:0;right:0;bottom:0;left:56px;' : 'position:absolute;top:0;right:0;bottom:0;left:0;';
+
+        html += `<div class="${laneClass}" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px">
+            ${yaxisHtml}
+            <span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>
+            ${infoBadge}
+            <div class="dv-chart-wrap" style="${chartWrapStyle}">
+                <canvas id="dv-chart-${type}"></canvas>
+            </div>
+        </div>`;
     }
 
+    // Now line
     if (showNowLine && visibleTypes.length && dvState.toggles[visibleTypes[0]] && eventCount > 0) {
         const nowMs = now.getTime();
         const nowPct = dvPercentThrough(dayStart, nowMs);
@@ -195,6 +279,17 @@ function dvBuild() {
     }
 
     elLanes.innerHTML = html;
+
+    // Create charts for each visible lane
+    for (const type of visibleTypes) {
+        const events = dvGetEvents(data, type);
+        if (events.length === 0) continue;
+
+        const yaxis = YAXIS_RANGES[type];
+        const range = dvGetYAxisRange(type, events, yaxis);
+
+        dvCharts[type] = dvCreateLaneChart(type, events, yaxis, range.yMin, range.yMax, dayStart);
+    }
 }
 
 /* ------------------------------------------------------------------ */
