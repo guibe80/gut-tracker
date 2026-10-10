@@ -163,6 +163,7 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart, timeWindow
         data: {
             labels: labels,
             datasets: [{
+                label: '',
                 data: events.map(e => ({
                     x: new Date(e.t).getTime(),
                     y: type === 'gut' || type === 'bowel' ? 0.5 : (e.value || 0)

@@ -46,11 +46,15 @@ function createChartConfig(options = {}) {
     const opts = options || {};
     return {
         type: 'line',
-        data: opts.data || { labels: [], datasets: [] },
+        data: {
+            labels: (opts.data && opts.data.labels) || [],
+            datasets: (opts.data && opts.data.datasets) || []
+        },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             legend: { display: false },
+        tooltips: { enabled: false },
             scales: {
                 x: {
                     type: 'category',
@@ -80,6 +84,7 @@ function createChartConfig(options = {}) {
                 }
             },
             plugins: {
+                legend: { display: false },
                 tooltip: {
                     enabled: false,
                     external: createExternalTooltipHandler(opts.getLabel, opts.getDetail)
