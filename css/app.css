@@ -150,6 +150,7 @@
             top: 0;
             right: 0;
             bottom: 0;
+            left: 0;
         }
 
         .dayview .dv-chart-wrap canvas {
@@ -294,12 +295,7 @@
             border-radius: 3px;
         }
 
-        .dayview .dv-lane.has-yaxis { height: 100px; }
-        .dayview .dv-yaxis { position: absolute; left: 0; top: 0; bottom: 0; width: 50px; }
-        .dayview .dv-yaxis span { position: absolute; bottom: 0; right: 0; text-align: right; padding-right: 4px; font-size: 9px; color: var(--m); line-height: 1; }
-        .dayview .dv-yaxis-label { position: absolute; left: 50px; top: 50%; transform: translateY(-50%); width: 50px; text-align: right; font-size: 8px; color: var(--m); line-height: 1; }
         .dayview .dv-info { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); text-align: right; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; color: #fff; opacity: 0.85; white-space: nowrap; z-index: 3; }
-        .dayview .dv-event.has-yaxis { top: auto; transform: translate(-50%, 50%); }
         .dayview .dv-trend { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
 
         .dayview .dv-empty {

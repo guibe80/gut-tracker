@@ -221,45 +221,26 @@ function dvBuild() {
         eventCount += events.length;
 
         const yaxis = YAXIS_RANGES[type];
-        let laneClass = 'dv-lane';
-        let yaxisHtml = '';
-        let yMin, yMax;
+        const range = dvGetYAxisRange(type, events, yaxis);
+        const yMin = range.yMin;
+        const yMax = range.yMax;
 
-        if (yaxis) {
-            laneClass += ' has-yaxis';
-            const range = dvGetYAxisRange(type, events, yaxis);
-            yMin = range.yMin;
-            yMax = range.yMax;
-
-            if (yMin !== undefined && yMax !== undefined && yMax > yMin) {
-                const rangeVal = yMax - yMin;
-                const ticks = yaxis.maxOnly ? [yMin, yMax] : (() => {
-                    const step = type === 'food' ? (rangeVal <= 50 ? 5 : 10) : (rangeVal <= 6 ? 1 : rangeVal <= 20 ? 2 : 5);
-                    const t = [];
-                    for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) t.push(v);
-                    return t;
-                })();
-                yaxisHtml = `<div class="dv-yaxis">${ticks.map(v => { const pct = ((v - yMin) / (yMax - yMin)) * 100; return `<span style="bottom:${pct}%">${Number.isInteger(v) ? v : v.toFixed(1)}</span>`; }).join('')}</div><span class="dv-yaxis-label">${yaxis.label || ''}</span>`;
-            }
-        }
-
-        // Info badge
+        // Info badge — cumulative for food/water, average for glucose/weight
         let infoBadge = '';
         if (type === 'food' && events.length) {
             infoBadge = `<div class="dv-info" style="background:var(--dv-lane-food)">${events.reduce((s,e) => s + (e.value || 0), 0).toFixed(0)}g carbs</div>`;
         } else if (type === 'glucose' && events.length) {
-            infoBadge = `<div class="dv-info" style="background:var(--dv-lane-glucose)">avg ${(events.reduce((s,e) => s + e.value, 0) / events.length).toFixed(1)}</div>`;
+            infoBadge = `<div class="dv-info" style="background:var(--dv-lane-glucose)">avg ${(events.reduce((s,e) => s + e.value, 0) / events.length).toFixed(1)} mmol/L</div>`;
+        } else if (type === 'weight' && events.length) {
+            infoBadge = `<div class="dv-info" style="background:var(--dv-lane-weight)">avg ${(events.reduce((s,e) => s + e.value, 0) / events.length).toFixed(1)} kg</div>`;
         } else if (type === 'water' && events.length) {
             infoBadge = `<div class="dv-info" style="background:var(--dv-lane-water)">${events.reduce((s,e) => s + e.value, 0).toFixed(0)} ml</div>`;
         }
 
-        const chartWrapStyle = yaxis ? 'position:absolute;top:0;right:0;bottom:0;left:56px;' : 'position:absolute;top:0;right:0;bottom:0;left:0;';
-
-        html += `<div class="${laneClass}" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px">
-            ${yaxisHtml}
+        html += `<div class="dv-lane" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px">
             <span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>
             ${infoBadge}
-            <div class="dv-chart-wrap" style="${chartWrapStyle}">
+            <div class="dv-chart-wrap">
                 <canvas id="dv-chart-${type}"></canvas>
             </div>
         </div>`;
