@@ -37,6 +37,20 @@
 - `notes` text
 - `created_at` timestamp with time zone NOT NULL DEFAULT now()
 
+### five_a_day_entries
+- `id` uuid NOT NULL DEFAULT gen_random_uuid()
+- `user_id` uuid NOT NULL
+- `consumed_at` timestamp with time zone NOT NULL
+- `food_name` text NOT NULL
+- `category` text NOT NULL
+- `quantity` numeric NOT NULL
+- `unit` text NOT NULL
+- `qualifying_weight_g` numeric
+- `source` text NOT NULL DEFAULT 'catalogue'
+- `confirmed` boolean NOT NULL DEFAULT false
+- `created_at` timestamp with time zone NOT NULL DEFAULT now()
+- `updated_at` timestamp with time zone NOT NULL DEFAULT now()
+
 ### glucose_readings
 - `id` uuid NOT NULL DEFAULT gen_random_uuid()
 - `user_id` uuid NOT NULL
@@ -114,6 +128,7 @@
 - `bowel_movements` → `id`
 - `daily_context` → `id`
 - `foods` → `id`
+- `five_a_day_entries` → `id`
 - `glucose_readings` → `id`
 - `gut_symptoms` → `id`
 - `meal_foods` → `id`
@@ -133,6 +148,7 @@
 - `meal_foods.food_id` → `foods.id` [ON DELETE SET NULL, ON UPDATE NO ACTION]
 - `meal_foods.meal_id` → `meals.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
 - `meals.user_id` → `profiles.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
+- `five_a_day_entries.user_id` → `profiles.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
 - `profiles.id` → `auth.users.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
 - `water_intake.meal_id` → `meals.id` [ON DELETE SET NULL, ON UPDATE NO ACTION]
 - `water_intake.user_id` → `profiles.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
@@ -165,6 +181,15 @@
 - `foods` → name IS NOT NULL
 - `foods` → created_at IS NOT NULL
 - `foods` → (fodmap_category = ANY (ARRAY['low'::text, 'high'::text, 'unknown'::text]))
+- `five_a_day_entries` → food_name is non-empty and no longer than 120 characters
+- `five_a_day_entries` → category is one of fruit, vegetable, beans_pulses, dried_fruit, juice_smoothie, mixed_dish, excluded
+- `five_a_day_entries` → quantity > 0
+- `five_a_day_entries` → unit is g or ml
+- `five_a_day_entries` → juice_smoothie uses ml and all other categories use g
+- `five_a_day_entries` → qualifying_weight_g is null or >= 0
+- `five_a_day_entries` → mixed_dish requires qualifying_weight_g <= quantity
+- `five_a_day_entries` → source is one of catalogue, manual, ai_suggestion
+- `five_a_day_entries` → id, user_id, consumed_at, food_name, category, quantity, unit, source, confirmed, created_at and updated_at are NOT NULL
 - `glucose_readings` → created_at IS NOT NULL
 - `glucose_readings` → (context = ANY (ARRAY['normal'::text, 'exercise'::text, 'illness'::text, 'poor_sleep'::text, 'stress'::text, 'alcohol'::text, 'unusual_meal'::text, 'other'::text]))
 - `glucose_readings` → (meal_relationship = ANY (ARRAY['fasting'::text, 'pre_meal'::text, 'post_meal'::text, 'unrelated'::text, 'unknown'::text]))
@@ -218,6 +243,8 @@
 - `daily_context` → idx_context_user_date: CREATE INDEX idx_context_user_date ON public.daily_context USING btree (user_id, context_date DESC)
 - `foods` → foods_name_key: CREATE UNIQUE INDEX foods_name_key ON public.foods USING btree (name)
 - `foods` → foods_pkey: CREATE UNIQUE INDEX foods_pkey ON public.foods USING btree (id)
+- `five_a_day_entries` → five_a_day_entries_pkey: CREATE UNIQUE INDEX five_a_day_entries_pkey ON public.five_a_day_entries USING btree (id)
+- `five_a_day_entries` → idx_five_a_day_user_consumed_at: CREATE INDEX idx_five_a_day_user_consumed_at ON public.five_a_day_entries USING btree (user_id, consumed_at DESC)
 - `glucose_readings` → glucose_readings_pkey: CREATE UNIQUE INDEX glucose_readings_pkey ON public.glucose_readings USING btree (id)
 - `glucose_readings` → idx_glucose_meal: CREATE INDEX idx_glucose_meal ON public.glucose_readings USING btree (meal_id)
 - `glucose_readings` → idx_glucose_meal_time: CREATE INDEX idx_glucose_meal_time ON public.glucose_readings USING btree (meal_id, measured_at)
@@ -241,6 +268,7 @@
 - `bowel_movements`: RLS ENABLED
 - `daily_context`: RLS ENABLED
 - `foods`: RLS ENABLED
+- `five_a_day_entries`: RLS ENABLED
 - `glucose_readings`: RLS ENABLED
 - `gut_symptoms`: RLS ENABLED
 - `meal_foods`: RLS ENABLED
@@ -250,6 +278,30 @@
 - `weight_entries`: RLS ENABLED
 
 ## RLS POLICIES
+
+- `five_a_day_entries` → **Users can delete own 5 A Day entries**
+  Command: DELETE
+  Roles: authenticated
+  Using: (user_id = auth.uid())
+  With check: none
+
+- `five_a_day_entries` → **Users can insert own 5 A Day entries**
+  Command: INSERT
+  Roles: authenticated
+  Using: none
+  With check: (user_id = auth.uid())
+
+- `five_a_day_entries` → **Users can update own 5 A Day entries**
+  Command: UPDATE
+  Roles: authenticated
+  Using: (user_id = auth.uid())
+  With check: (user_id = auth.uid())
+
+- `five_a_day_entries` → **Users can view own 5 A Day entries**
+  Command: SELECT
+  Roles: authenticated
+  Using: (user_id = auth.uid())
+  With check: none
 
 - `bowel_movements` → **Users can delete own bowel movements**
   Command: DELETE
@@ -493,6 +545,7 @@ Language: plpgsql
 
 ## TRIGGERS
 
+- `five_a_day_entries` → `five_a_day_entries_updated_at`: EXECUTE FUNCTION set_updated_at()
 - `daily_context` → `daily_context_updated_at`: EXECUTE FUNCTION set_updated_at()
 - `meals` → `meals_updated_at`: EXECUTE FUNCTION set_updated_at()
 - `profiles` → `profiles_updated_at`: EXECUTE FUNCTION set_updated_at()

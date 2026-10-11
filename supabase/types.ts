@@ -150,6 +150,59 @@ export type Database = {
         }
         Relationships: []
       }
+      five_a_day_entries: {
+        Row: {
+          category: string
+          confirmed: boolean
+          consumed_at: string
+          created_at: string
+          food_name: string
+          id: string
+          qualifying_weight_g: number | null
+          quantity: number
+          source: string
+          unit: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          confirmed?: boolean
+          consumed_at: string
+          created_at?: string
+          food_name: string
+          id?: string
+          qualifying_weight_g?: number | null
+          quantity: number
+          source?: string
+          unit: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          confirmed?: boolean
+          consumed_at?: string
+          created_at?: string
+          food_name?: string
+          id?: string
+          qualifying_weight_g?: number | null
+          quantity?: number
+          source?: string
+          unit?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "five_a_day_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       glucose_readings: {
         Row: {
           context: string | null
