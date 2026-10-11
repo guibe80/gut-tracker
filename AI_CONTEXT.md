@@ -65,7 +65,7 @@ Weight measurements.
 - Keep this file as the concise project reference. `AGENTS.md` contains Git and release workflow rules.
 
 ## Data and security
-- Schema snapshot: `supabase/SCHEMA-SNAPSHOT.md`; generated types: `supabase/types.ts`. Snapshot last checked 2026-09-12; verify live columns and RLS before changing queries or payloads.
+- Schema snapshot: `supabase/SCHEMA-SNAPSHOT.md`; generated types: `supabase/types.ts`. Snapshot last checked 2026-10-11; verify live columns and RLS before changing queries or payloads.
 - Supabase Auth identifies users with `auth.uid()`; user data uses `user_id`. Preserve RLS and foreign keys.
 - Never commit secrets, keys, or personal health data. Keep future AI credentials server-side; validate AI output and require user review before saving.
 - Database changes require a migration; regenerate `types.ts` and update the schema snapshot.

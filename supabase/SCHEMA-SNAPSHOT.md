@@ -92,6 +92,15 @@
 - `created_at` timestamp with time zone NOT NULL DEFAULT now()
 - `updated_at` timestamp with time zone NOT NULL DEFAULT now()
 
+### water_intake
+- `id` uuid NOT NULL DEFAULT gen_random_uuid()
+- `user_id` uuid NOT NULL
+- `consumed_at` timestamp with time zone NOT NULL
+- `amount_ml` numeric NOT NULL
+- `source` text NOT NULL
+- `meal_id` uuid
+- `created_at` timestamp with time zone NOT NULL DEFAULT now()
+
 ### weight_entries
 - `id` uuid NOT NULL DEFAULT gen_random_uuid()
 - `user_id` uuid NOT NULL
@@ -110,6 +119,7 @@
 - `meal_foods` → `id`
 - `meals` → `id`
 - `profiles` → `id`
+- `water_intake` → `id`
 - `weight_entries` → `id`
 
 ## FOREIGN KEYS
@@ -123,6 +133,10 @@
 - `meal_foods.food_id` → `foods.id` [ON DELETE SET NULL, ON UPDATE NO ACTION]
 - `meal_foods.meal_id` → `meals.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
 - `meals.user_id` → `profiles.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
+- `profiles.id` → `auth.users.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
+- `water_intake.meal_id` → `meals.id` [ON DELETE SET NULL, ON UPDATE NO ACTION]
+- `water_intake.user_id` → `profiles.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
+- `weight_entries.user_id` → `auth.users.id` [ON DELETE CASCADE, ON UPDATE NO ACTION]
 
 ## UNIQUE CONSTRAINTS
 
@@ -180,6 +194,14 @@
 - `profiles` → updated_at IS NOT NULL
 - `profiles` → created_at IS NOT NULL
 - `profiles` → id IS NOT NULL
+- `water_intake` → (amount_ml > (0)::numeric)
+- `water_intake` → (source = ANY (ARRAY['manual'::text, 'meal'::text]))
+- `water_intake` → id IS NOT NULL
+- `water_intake` → user_id IS NOT NULL
+- `water_intake` → consumed_at IS NOT NULL
+- `water_intake` → amount_ml IS NOT NULL
+- `water_intake` → source IS NOT NULL
+- `water_intake` → created_at IS NOT NULL
 - `weight_entries` → ((weight_kg > (0)::numeric) AND (weight_kg < (1000)::numeric))
 - `weight_entries` → id IS NOT NULL
 - `weight_entries` → user_id IS NOT NULL
@@ -208,6 +230,9 @@
 - `meals` → idx_meals_user_time: CREATE INDEX idx_meals_user_time ON public.meals USING btree (user_id, meal_time DESC)
 - `meals` → meals_pkey: CREATE UNIQUE INDEX meals_pkey ON public.meals USING btree (id)
 - `profiles` → profiles_pkey: CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)
+- `water_intake` → idx_water_meal: CREATE INDEX idx_water_meal ON public.water_intake USING btree (meal_id)
+- `water_intake` → idx_water_user_time: CREATE INDEX idx_water_user_time ON public.water_intake USING btree (user_id, consumed_at DESC)
+- `water_intake` → water_intake_pkey: CREATE UNIQUE INDEX water_intake_pkey ON public.water_intake USING btree (id)
 - `weight_entries` → weight_entries_pkey: CREATE UNIQUE INDEX weight_entries_pkey ON public.weight_entries USING btree (id)
 - `weight_entries` → weight_entries_user_measured_at_idx: CREATE INDEX weight_entries_user_measured_at_idx ON public.weight_entries USING btree (user_id, measured_at DESC)
 
@@ -221,6 +246,7 @@
 - `meal_foods`: RLS ENABLED
 - `meals`: RLS ENABLED
 - `profiles`: RLS ENABLED
+- `water_intake`: RLS ENABLED
 - `weight_entries`: RLS ENABLED
 
 ## RLS POLICIES
@@ -401,6 +427,30 @@
   Using: (id = auth.uid())
   With check: none
 
+- `water_intake` → **Users can delete own water entries**
+  Command: DELETE
+  Roles: authenticated
+  Using: (user_id = auth.uid())
+  With check: none
+
+- `water_intake` → **Users can insert own water entries**
+  Command: INSERT
+  Roles: authenticated
+  Using: none
+  With check: (user_id = auth.uid())
+
+- `water_intake` → **Users can update own water entries**
+  Command: UPDATE
+  Roles: authenticated
+  Using: (user_id = auth.uid())
+  With check: (user_id = auth.uid())
+
+- `water_intake` → **Users can view own water entries**
+  Command: SELECT
+  Roles: authenticated
+  Using: (user_id = auth.uid())
+  With check: none
+
 - `weight_entries` → **Users can add their own weight entries**
   Command: INSERT
   Roles: authenticated
@@ -565,6 +615,20 @@ None
 - `authenticated` → `public.profiles` : TRIGGER
 - `authenticated` → `public.profiles` : TRUNCATE
 - `authenticated` → `public.profiles` : UPDATE
+- `anon` → `public.water_intake` : DELETE
+- `anon` → `public.water_intake` : INSERT
+- `anon` → `public.water_intake` : REFERENCES
+- `anon` → `public.water_intake` : SELECT
+- `anon` → `public.water_intake` : TRIGGER
+- `anon` → `public.water_intake` : TRUNCATE
+- `anon` → `public.water_intake` : UPDATE
+- `authenticated` → `public.water_intake` : DELETE
+- `authenticated` → `public.water_intake` : INSERT
+- `authenticated` → `public.water_intake` : REFERENCES
+- `authenticated` → `public.water_intake` : SELECT
+- `authenticated` → `public.water_intake` : TRIGGER
+- `authenticated` → `public.water_intake` : TRUNCATE
+- `authenticated` → `public.water_intake` : UPDATE
 - `authenticated` → `public.weight_entries` : DELETE
 - `authenticated` → `public.weight_entries` : INSERT
 - `authenticated` → `public.weight_entries` : SELECT
