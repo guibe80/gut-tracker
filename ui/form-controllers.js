@@ -77,7 +77,6 @@ function openEditForm(table, id) {
     setFormMode(tab + 'Form', true);
     if (table === 'meals') {
         const mealFoodRows = mealFoods.filter(food => food.meal_id === id);
-        const mealTags = mealFoodRows.map(food => food.notes || '').join(' ');
         $('fd').value = fields.date;
         $('ft').value = fields.time;
         $('fm').value = (record.meal_type || 'other').replace(/^./, character => character.toUpperCase());
@@ -86,7 +85,8 @@ function openEditForm(table, id) {
         $('ffg').value = record.fibre_estimate_g ?? '';
         $('foods').value = mealFoodRows.map(food => food.food_name).filter(Boolean).join(', ');
         $('fn').value = record.notes || '';
-        document.querySelectorAll('#foodForm input[type=checkbox]').forEach(input => { input.checked = mealTags.includes(input.value) });
+        const savedTriggers = record.triggers || [];
+        document.querySelectorAll('#foodForm input[type=checkbox]').forEach(input => { input.checked = savedTriggers.includes(input.value) });
     }
     if (table === 'glucose_readings') {
         $('gd').value = fields.date;
@@ -304,24 +304,24 @@ function bindFormHandlers() {
         try {
             const editingMealId = editState?.table === 'meals' ? editState.id : null;
             const mealType = $('fm').value, normalizedMealType = supportedMealType(mealType);
+            const triggers = [...document.querySelectorAll('#foodForm input[type=checkbox]:checked')].map(x => x.value);
             const meal = await save('meals', {
                 meal_time: localIso($('fd').value, $('ft').value),
                 meal_type: normalizedMealType,
                 estimated_carbohydrate_g: num($('fcg').value),
                 protein_estimate_g: num($('fpg').value),
                 fibre_estimate_g: num($('ffg').value),
+                triggers: triggers,
                 notes: [$('fn').value.trim(), $('fp').value !== 'Normal' ? `Portion: ${$('fp').value}` : '', mealType.toLowerCase() === normalizedMealType ? '' : `Original meal type: ${mealType}`].filter(Boolean).join(' · ')
             }, 'fs');
             const foods = $('foods').value.trim();
-            const triggers = [...document.querySelectorAll('#foodForm input[type=checkbox]:checked')].map(x => x.value);
             if (editingMealId) {
                 const foodDelete = await supabaseClient.from('meal_foods').delete().eq('meal_id', editingMealId);
                 if (foodDelete.error) throw foodDelete.error;
             }
-            if (foods || triggers.length) {
+            if (foods) {
                 await insertWithSchemaFallback('meal_foods', {
-                    meal_id: meal.id, user_id: user.id, food_name: foods || 'Unspecified',
-                    notes: triggers.length ? 'Triggers: ' + triggers.join(', ') : null
+                    meal_id: meal.id, user_id: user.id, food_name: foods, notes: null
                 });
             }
             /** Water integration: add water entries from drink meals */

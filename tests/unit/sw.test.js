@@ -11,6 +11,19 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+// Mock Response (minimal) — defined at module level so both sandbox and tests can use it
+class MockResponse {
+    constructor(body, opts = {}) {
+        this.body = body;
+        this.status = opts.status || 200;
+        this.statusText = opts.statusText || 'OK';
+        this.headers = opts.headers || {};
+        this._bodyText = typeof body === 'string' ? body : '';
+    }
+    async text() { return this._bodyText; }
+    clone() { return new MockResponse(this.body, { status: this.status, statusText: this.statusText, headers: this.headers }); }
+}
+
 // Load version.js to get APP_VERSION
 const versionCode = fs.readFileSync(path.resolve(__dirname, '../../version.js'), 'utf8');
 const APP_VERSION = versionCode.match(/APP_VERSION\s*=\s*'([^']+)'/)[1];
@@ -74,20 +87,15 @@ function createSWSandbox() {
             activateDeletedKeys.push(key);
             return this._stores.delete(key);
         },
+        async match(request) {
+            const key = typeof request === 'string' ? request : request.url;
+            for (const store of this._stores.values()) {
+                const hit = store.get(key);
+                if (hit) return hit;
+            }
+            return null;
+        },
     };
-
-    // Mock Response (minimal)
-    class MockResponse {
-        constructor(body, opts = {}) {
-            this.body = body;
-            this.status = opts.status || 200;
-            this.statusText = opts.statusText || 'OK';
-            this.headers = opts.headers || {};
-            this._bodyText = typeof body === 'string' ? body : '';
-        }
-        async text() { return this._bodyText; }
-        clone() { return new MockResponse(this.body, { status: this.status, statusText: this.statusText, headers: this.headers }); }
-    }
 
     // Mock fetch
     const mockFetch = async (request, opts) => {

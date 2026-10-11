@@ -55,7 +55,8 @@ function entryHtml(table, x, mealFoods) {
         case 'meals': {
             const foods = mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', ');
             const mealType = (x.meal_type || '').replace(/^./, character => character.toUpperCase());
-            return `<div class="entry"><strong>${esc(fmt(x.meal_time))}</strong> · ${esc(mealType)}<div>${esc(foods || x.notes || '')}</div><div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="meals" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="meals" data-delete-id="${esc(x.id)}">Delete</button></div></div>`;
+            const triggers = x.triggers && x.triggers.length ? `<div class="muted">Triggers: ${esc(x.triggers.join(', '))}</div>` : '';
+            return `<div class="entry"><strong>${esc(fmt(x.meal_time))}</strong> · ${esc(mealType)}<div>${esc(foods || x.notes || '')}</div>${triggers}<div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="meals" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="meals" data-delete-id="${esc(x.id)}">Delete</button></div></div>`;
         }
         case 'glucose_readings':
             return `<div class="entry"><strong>${esc(fmt(x.measured_at))}</strong> · ${esc(x.glucose_mmol_l)} mmol/L · ${esc(x.timing || '')}<div class="entry-actions"><button type="button" class="entry-edit" data-edit-table="glucose_readings" data-edit-id="${esc(x.id)}">Edit</button><button type="button" class="entry-delete" data-delete-table="glucose_readings" data-delete-id="${esc(x.id)}">Delete</button></div></div>`;

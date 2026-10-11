@@ -3,8 +3,7 @@
 //
 // Tests the dedup helper functions (hasImportedFood, hasImportedSymptom,
 // hasImportedBowel) and the exportV3Backup function.
-// These are loaded from services/data-service.js (dedup functions) and
-// services/v2-import.js (export function).
+// These are loaded from services/v2-import.js.
 
 const { test, describe, beforeEach } = require('node:test');
 const assert = require('node:assert');
