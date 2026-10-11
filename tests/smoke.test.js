@@ -109,6 +109,76 @@ test.describe('Grouped navigation', () => {
   });
 });
 
+test.describe('Responsive date controls', () => {
+  test('date controls stay within their cards at supported viewport widths', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await page.locator('#auth').evaluate(element => element.classList.add('hidden'));
+    await page.locator('#app').evaluate(element => element.classList.remove('hidden'));
+
+    const widths = [320, 360, 390, 430, 768, 1024, 1280];
+    const controls = [
+      { tab: 'water', selector: '#water .section-title > .row', card: '#water .card' },
+      { tab: 'fiveaday', selector: '.fiveaday-date', card: '#fiveaday .card' },
+      { tab: 'dayview', selector: '.dv-date', card: '#dayview .card' },
+    ];
+
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 });
+
+      for (const control of controls) {
+        await page.evaluate(tab => openTab(tab), control.tab);
+        if (width === 320 && control.tab === 'fiveaday') {
+          await expect(page.locator('#fiveADaySelectedDate')).toHaveAccessibleName('Selected day');
+        }
+        const layout = await page.locator(control.selector).evaluate((container, cardSelector) => {
+          const rect = element => {
+            const bounds = element.getBoundingClientRect();
+            return {
+              left: bounds.left,
+              right: bounds.right,
+              top: bounds.top,
+              bottom: bounds.bottom,
+            };
+          };
+          const containerBounds = rect(container);
+          const cardBounds = rect(document.querySelector(cardSelector));
+          const children = [...container.querySelectorAll('button, input')].map(rect);
+          return {
+            container: containerBounds,
+            card: cardBounds,
+            children,
+            documentWidth: document.documentElement.scrollWidth,
+            viewportWidth: window.innerWidth,
+          };
+        }, control.card);
+
+        expect(layout.container.left, `${control.tab} left edge at ${width}px`).toBeGreaterThanOrEqual(layout.card.left);
+        expect(layout.container.right, `${control.tab} right edge at ${width}px`).toBeLessThanOrEqual(layout.card.right + 1);
+        expect(layout.children.length, `${control.tab} control count`).toBe(4);
+        for (const child of layout.children) {
+          expect(child.left, `${control.tab} control left edge at ${width}px`).toBeGreaterThanOrEqual(layout.container.left);
+          expect(child.right, `${control.tab} control right edge at ${width}px`).toBeLessThanOrEqual(layout.container.right + 1);
+        }
+        expect(layout.children[0].top, `${control.tab} previous/date/next alignment at ${width}px`)
+          .toBeCloseTo(layout.children[1].top, 0);
+        expect(layout.children[1].top, `${control.tab} date/next alignment at ${width}px`)
+          .toBeCloseTo(layout.children[2].top, 0);
+        if (width <= 320) {
+          expect(layout.children[3].top, `${control.tab} Today placement at ${width}px`)
+            .toBeGreaterThan(layout.children[0].top);
+        } else {
+          expect(layout.children[3].top, `${control.tab} Today placement at ${width}px`)
+            .toBeCloseTo(layout.children[0].top, 0);
+        }
+        expect(layout.documentWidth, `page horizontal overflow at ${width}px`)
+          .toBeLessThanOrEqual(layout.viewportWidth);
+      }
+    }
+
+  });
+});
+
 test.describe('PWA manifest', () => {
   test('manifest is valid JSON with required fields', async ({ page }) => {
     const response = await page.request.get('/manifest.webmanifest');
