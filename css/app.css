@@ -694,6 +694,92 @@
             .metrics {
                 grid-template-columns: 1fr 1fr
             }
+
+            #water .section-title {
+                flex-wrap: wrap;
+            }
+
+            #water .section-title > .row {
+                flex: 1 1 100%;
+                justify-content: flex-end;
+                min-width: 0;
+                gap: 4px;
+            }
+
+            #water #waterPrevDay,
+            #water #waterNextDay {
+                flex: 0 0 44px;
+                padding-inline: 4px;
+            }
+
+            #water #waterDate {
+                flex: 1 1 100px;
+                min-width: 100px;
+                padding-inline: 4px;
+            }
+
+            #water #waterToday {
+                flex: 0 0 60px;
+                padding-inline: 4px;
+            }
+
+            .fiveaday-date {
+                justify-content: flex-end;
+                gap: 4px;
+            }
+
+            .fiveaday-date label {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border: 0;
+            }
+
+            .fiveaday-date input {
+                width: auto;
+                min-width: 100px;
+                flex: 1 1 100px;
+                padding-inline: 4px;
+            }
+
+            .fiveaday-date button {
+                flex: 0 0 44px;
+                padding-inline: 4px;
+            }
+
+            .fiveaday-date button:last-child {
+                flex-basis: 60px;
+            }
+
+            .dayview .dv-date {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                gap: 4px;
+            }
+
+            .dayview .dv-date button {
+                flex: 0 0 44px;
+                padding-inline: 4px;
+            }
+
+            .dayview #dvToday {
+                flex-basis: 60px;
+            }
+
+            .dayview .dv-date input[type="date"] {
+                width: auto;
+                min-width: 100px;
+                flex: 1 1 100px;
+                padding-inline: 4px;
+            }
         }
 
     /* ------------------------------------------------------------------ */
