@@ -316,6 +316,16 @@
                         <button type="button" id="waterAdd500">＋500 ml</button>
                     </div>
 
+                    <form id="waterEditForm" class="water-edit-panel hidden">
+                        <h3>Edit water intake</h3>
+                        <div class="grid">
+                            <div><label for="waterEditAmount">Amount (ml)</label><input id="waterEditAmount" type="number" min="1" step="1" required></div>
+                            <div><label for="waterEditTime">Time</label><input id="waterEditTime" type="time" required></div>
+                        </div>
+                        <div class="row" style="margin-top:14px"><button class="primary" type="submit">Update water</button><button type="button" id="waterEditCancel">Cancel</button></div>
+                        <p id="waterEditMessage" class="muted" aria-live="polite"></p>
+                    </form>
+
                     <h3 style="margin-top:14px; margin-bottom:8px">Entries</h3>
                     <div id="waterEntries">
                         <p class="muted">No water recorded yet.</p>

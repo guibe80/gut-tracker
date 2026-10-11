@@ -752,3 +752,13 @@
         font-weight: 800;
         color: #4a90d9
     }
+
+    .water-edit-panel {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--b)
+    }
+
+    .water-edit-panel h3 {
+        margin: 0 0 10px
+    }

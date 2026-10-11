@@ -43,6 +43,14 @@ const MOCK_SUPABASE_SCRIPT = `
                         error: null
                     })
                 }),
+                update: (record) => {
+                    let entryId;
+                    const chain = {
+                        eq: (column, value) => { if (column === 'id') entryId = value; return chain; },
+                        select: () => Promise.resolve({ data: [{ id: entryId, ...record }], error: null })
+                    };
+                    return chain;
+                },
                 delete: () => {
                     const chain = {
                         eq: () => chain,
@@ -268,6 +276,28 @@ test.describe('Water intake', () => {
             await page.waitForTimeout(50);
         }
         await expect(page.locator('#waterConsumed')).toHaveText('250');
+    });
+
+    test('manual water entries can be edited with a new amount and time', async ({ page }) => {
+        await setupWaterTab(page);
+        await page.click('#waterAdd250');
+        await page.waitForTimeout(50);
+
+        await page.locator('[data-water-edit-id]').click();
+        await expect(page.locator('#waterEditForm')).toBeVisible();
+        await expect(page.locator('#waterEditAmount')).toHaveValue('250');
+        await page.locator('#waterEditAmount').fill('375');
+        await page.locator('#waterEditTime').fill('09:30');
+        await page.locator('#waterEditForm button[type="submit"]').click();
+
+        await expect(page.locator('#waterConsumed')).toHaveText('375');
+        await expect(page.locator('#waterEditForm')).toHaveClass(/hidden/);
+        const entryTime = await page.evaluate(() => {
+            const entry = waterIntake[0];
+            const date = new Date(entry.consumed_at);
+            return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        });
+        expect(entryTime).toBe('09:30');
     });
 
     test('changing dates does not mix water from different days', async ({ page }) => {

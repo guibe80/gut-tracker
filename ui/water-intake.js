@@ -190,6 +190,27 @@ async function removeWaterEntry(entryId) {
     waterIntake = waterIntake.filter(e => e.id !== entryId);
 }
 
+/**
+ * Update a manually logged water entry and keep the local view in sync.
+ */
+async function updateWaterEntry(entryId, amountMl, consumedAt) {
+    if (!entryId || !user || !supabaseClient) return null;
+    const amount = Math.round(Number(amountMl));
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter an amount greater than zero.');
+
+    const { data, error } = await supabaseClient
+        .from('water_intake')
+        .update({ amount_ml: amount, consumed_at: consumedAt })
+        .eq('id', entryId)
+        .eq('user_id', user.id)
+        .select();
+    if (error) throw error;
+
+    const updated = Array.isArray(data) ? data[0] : data;
+    if (updated) waterIntake = waterIntake.map(entry => entry.id === entryId ? updated : entry);
+    return updated || null;
+}
+
 /* ------------------------------------------------------------------ */
 /* Target calculation (uses app globals)                              */
 /* ------------------------------------------------------------------ */
@@ -209,6 +230,7 @@ function getWaterTarget() {
 /* ------------------------------------------------------------------ */
 
 let waterState = { date: getDateKey() };
+let waterEditId = null;
 
 /**
  * Render the complete water intake UI for the current waterState.date.
@@ -267,9 +289,33 @@ function waterEntryHtml(entry) {
     return `<div class="entry">
         <strong>${entry.amount_ml} ml</strong> · <span class="muted">${time}</span> · <span class="muted">${source}</span>
         <div class="entry-actions">
+            ${entry.source === 'manual' ? `<button type="button" class="entry-edit" data-water-edit-id="${esc(entry.id)}">Edit</button>` : ''}
             <button type="button" class="entry-delete" data-water-id="${esc(entry.id)}">Delete</button>
         </div>
     </div>`;
+}
+
+function waterTimeValue(consumedAt) {
+    const date = new Date(consumedAt);
+    return Number.isNaN(date.getTime()) ? '' : date.toTimeString().slice(0, 5);
+}
+
+function openWaterEdit(entryId) {
+    const entry = waterIntake.find(item => item.id === entryId && item.source === 'manual');
+    if (!entry) return;
+    waterEditId = entry.id;
+    $('waterEditAmount').value = entry.amount_ml;
+    $('waterEditTime').value = waterTimeValue(entry.consumed_at);
+    $('waterEditMessage').textContent = '';
+    $('waterEditForm').classList.remove('hidden');
+    $('waterEditAmount').focus();
+}
+
+function closeWaterEdit() {
+    waterEditId = null;
+    $('waterEditForm')?.classList.add('hidden');
+    $('waterEditForm')?.reset();
+    $('waterEditMessage').textContent = '';
 }
 
 /* ------------------------------------------------------------------ */
@@ -304,9 +350,28 @@ function initWaterIntake() {
         });
     }
 
-    // Delete water entry (event delegation)
+    $('waterEditCancel')?.addEventListener('click', closeWaterEdit);
+    $('waterEditForm')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!waterEditId) return;
+        const amount = Number($('waterEditAmount').value);
+        const time = $('waterEditTime').value;
+        if (!time) { $('waterEditMessage').textContent = 'Choose a time.'; return; }
+        const consumedAt = new Date(`${waterState.date}T${time}`).toISOString();
+        try {
+            await updateWaterEntry(waterEditId, amount, consumedAt);
+            closeWaterEdit();
+            renderWaterIntake();
+        } catch (error) {
+            $('waterEditMessage').textContent = error.message || 'Unable to update water intake.';
+        }
+    });
+
+    // Edit and delete water entries (event delegation)
     if ($('waterEntries')) {
         $('waterEntries').addEventListener('click', async event => {
+            const editButton = event.target.closest('[data-water-edit-id]');
+            if (editButton) { openWaterEdit(editButton.dataset.waterEditId); return; }
             const btn = event.target.closest('.entry-delete');
             if (!btn) return;
             const id = btn.dataset.waterId;
