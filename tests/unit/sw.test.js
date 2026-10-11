@@ -315,51 +315,134 @@ describe('sw.js fetch handler', () => {
 // ------------------------------------------------------------------
 // appResponse — legacy app-shell compatibility rewriting
 // ------------------------------------------------------------------
+// The three tests below drive the real appResponse path through the
+// fetch handler. They replace earlier simulated tests that duplicated
+// sw.js patching logic inline — those were maintenance hazards because
+// they could drift out of sync with the implementation.
+//
+// appResponse is not directly exported, so we exercise it by serving a
+// legacy app shell from the (mocked) network for an app-shell GET and
+// asserting on the patched response.
 
 describe('appResponse — compatibility patching', () => {
-    test('patches old version strings to current version', async () => {
+
+    test('appResponse patches a full legacy app-shell through the fetch handler', async () => {
         const sandbox = loadSW();
+        const legacyShell = [
+            '<!doctype html><html><head>',
+            '<title>Gut Tracker 3.2.4</title>',
+            '<script>async function saveSilent("meals", payload){}</script>',
+            '<script>await saveSilent("meals", { meal_time: "2025-01-01" })</script>',
+            '</head><body><div id="github">github</div></body></html>'
+        ].join('');
 
-        // Access appResponse indirectly through the fetch handler
-        const oldVersions = ['3.1.3', '3.2.1', '3.2.2', '3.2.3', '3.2.4'];
-        for (const oldVersion of oldVersions) {
-            const response = new MockResponse(
-                `<html><head></head><body>Version: ${oldVersion}</body></html>`
-            );
-            // appResponse is not directly accessible, but we can test the patching
-            // by simulating what it does
-            const patched = response._bodyText
-                .replaceAll('3.1.3', APP_VERSION)
-                .replaceAll('3.2.1', APP_VERSION)
-                .replaceAll('3.2.2', APP_VERSION)
-                .replaceAll('3.2.3', APP_VERSION)
-                .replaceAll('3.2.4', APP_VERSION);
-            assert.ok(!patched.includes(oldVersion),
-                `Old version ${oldVersion} should be patched to ${APP_VERSION}`);
-            assert.ok(patched.includes(APP_VERSION),
-                `Patched content should include ${APP_VERSION}`);
+        // Serve the legacy shell from the network for an app-shell GET.
+        sandbox.fetch = async (request) => {
+            return new MockResponse(legacyShell, {
+                status: 200,
+                statusText: 'OK',
+                headers: { 'content-type': 'text/html' }
+            });
+        };
+
+        const event = mockFetchEvent('http://localhost:8080/');
+        sandbox._listeners.fetch(event);
+        const response = await event._getRespondWith();
+        const text = await response.text();
+
+        // Old version strings must be replaced with the current version.
+        assert.ok(!text.includes('3.2.4'), 'stale version 3.2.4 must be rewritten');
+        assert.ok(text.includes(APP_VERSION), `patched shell must include ${APP_VERSION}`);
+
+        // V2 saveSilent compatibility rewriting must be applied.
+        assert.ok(text.includes('window.__gutV2Save'), 'saveSilent must be exposed on window');
+        // The definition is rewritten to `window.__gutV2Save=async function saveSilent(`
+        // so the substring `async function saveSilent(` legitimately remains — what
+        // must NOT remain is a bare `await saveSilent(` call site.
+        assert.ok(!text.includes('await saveSilent('), 'bare saveSilent call sites must be rewritten');
+        assert.ok(text.includes('await window.__gutV2Save('), 'call sites must route through window.__gutV2Save');
+
+        // GitHub auth patch must be injected before </head>.
+        const patchIdx = text.indexOf('github');
+        const headIdx = text.indexOf('</head>');
+        assert.ok(patchIdx !== -1 && headIdx !== -1 && patchIdx < headIdx,
+            'GitHub patch must appear before </head>');
+    });
+
+    test('appResponse preserves status, statusText and headers', async () => {
+        const sandbox = loadSW();
+        const body = '<html><head></head><body>3.1.3</body></html>';
+        sandbox.fetch = async () => new MockResponse(body, {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'content-type': 'text/html', 'x-test': '1' }
+        });
+
+        const event = mockFetchEvent('http://localhost:8080/');
+        sandbox._listeners.fetch(event);
+        const response = await event._getRespondWith();
+        assert.strictEqual(response.status, 503);
+        assert.strictEqual(response.statusText, 'Service Unavailable');
+        assert.strictEqual(response.headers['content-type'], 'text/html');
+        assert.strictEqual(response.headers['x-test'], '1');
+    });
+
+    test('appResponse does not crash when there is no </head> tag', async () => {
+        const sandbox = loadSW();
+        const body = '<html><body>No head close tag here. 3.2.3</body></html>';
+        sandbox.fetch = async () => new MockResponse(body, { status: 200, statusText: 'OK', headers: {} });
+
+        const event = mockFetchEvent('http://localhost:8080/');
+        sandbox._listeners.fetch(event);
+        const response = await event._getRespondWith();
+        const text = await response.text();
+        assert.ok(!text.includes('3.2.3'), 'version string should still be patched');
+        assert.ok(text.includes(APP_VERSION), 'current version should be present');
+        // No </head> means the GitHub patch is simply not injected — body is returned intact.
+        assert.ok(!text.includes('github'), 'no github patch injected without </head>');
+    });
+});
+
+// ------------------------------------------------------------------
+// Asset list consistency — guards sw.js / README drift
+// ------------------------------------------------------------------
+
+describe('sw.js cached asset list matches the files on disk', () => {
+    async function getCachedAssets() {
+        const sandbox = loadSW();
+        const event = mockEvent();
+        sandbox._listeners.install(event);
+        assert.ok(event._getWaitUntil(), 'install handler must call waitUntil');
+        await event._getWaitUntil();
+        return sandbox._installCachedKeys;
+    }
+
+    test('every cached asset that is a source file exists on disk', async () => {
+        const cached = await getCachedAssets();
+        const missing = cached
+            .filter(url => !url.startsWith('http'))
+            .map(url => url.replace(/^\.\//, ''))
+            .filter(url => /^[A-Za-z0-9._/-]+$/.test(url))
+            .filter(url => !fs.existsSync(path.resolve(__dirname, '..', '..', url)));
+
+        assert.deepStrictEqual(missing, [],
+            `Cached assets missing from disk: ${missing.join(', ')}`);
+    });
+
+    test('all local source modules are present in the cached asset list', async () => {
+        const cached = new Set((await getCachedAssets()).map(url => url.replace(/^\.\//, '')));
+        const sourceRoots = ['utils', 'services', 'ui'];
+        const missing = [];
+        for (const dir of sourceRoots) {
+            const dirPath = path.resolve(__dirname, '..', '..', dir);
+            if (!fs.existsSync(dirPath)) continue;
+            for (const file of fs.readdirSync(dirPath)) {
+                if (file.endsWith('.js') && !cached.has(`${dir}/${file}`)) {
+                    missing.push(`${dir}/${file}`);
+                }
+            }
         }
-    });
-
-    test('patches V2 saveSilent references', () => {
-        const v2Code = 'await saveSilent("meals", payload)';
-        const patched = v2Code
-            .replace('async function saveSilent(', 'window.__gutV2Save=async function saveSilent(')
-            .replaceAll('await saveSilent(', 'await window.__gutV2Save(');
-        assert.ok(patched.includes('window.__gutV2Save'),
-            'saveSilent should be exposed on window for V2 compat');
-        assert.ok(!patched.includes('await saveSilent('),
-            'Original saveSilent calls should be replaced');
-    });
-
-    test('injects GitHub auth patch before </head>', () => {
-        const html = '<html><head><title>Test</title></head><body></body></html>';
-        // Simulate the PATCH injection
-        const PATCH = '<script>/*github-patch*/</script>';
-        const patched = html.replace('</head>', PATCH + '</head>');
-        assert.ok(patched.includes('/*github-patch*/'),
-            'GitHub patch should be injected');
-        assert.ok(patched.indexOf('/*github-patch*/') < patched.indexOf('</head>'),
-            'Patch must appear before </head>');
+        assert.deepStrictEqual(missing, [],
+            `Source modules missing from the SW cache list: ${missing.join(', ')}`);
     });
 });
