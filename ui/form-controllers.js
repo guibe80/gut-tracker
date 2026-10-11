@@ -461,10 +461,6 @@ function bindEventHandlers() {
     // Grouped navigation and direct pane switching.
     document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => openTab(btn.dataset.tab));
     document.querySelectorAll('.nav-group').forEach(btn => btn.onclick = () => openTab(lastTabByGroup[btn.dataset.navGroup]));
-    document.querySelectorAll('[data-quick-tab], [data-all-tab]').forEach(btn => btn.onclick = () => {
-        openTab(btn.dataset.quickTab || btn.dataset.allTab);
-        btn.closest('details')?.removeAttribute('open');
-    });
 
     // List entry actions (edit/delete)
     ['flist', 'glist', 'slist', 'blist', 'wlist'].forEach(id => {

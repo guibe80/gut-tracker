@@ -20,7 +20,7 @@
         main {
             max-width: 820px;
             margin: auto;
-            padding: 18px 16px 50px
+            padding: 18px 16px 112px
         }
 
         h1 {
@@ -39,27 +39,18 @@
 
         .app-nav {
             margin: 14px 0;
-            display: grid;
-            gap: 8px
+            display: block
         }
 
-        .nav-primary,
-        .nav-secondary,
-        .nav-utilities {
+        .nav-secondary {
             display: flex;
             gap: 8px;
             align-items: center;
             flex-wrap: wrap
         }
 
-        .nav-primary {
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--b)
-        }
-
         .nav-group,
-        .tab,
-        .nav-utilities summary {
+        .tab {
             min-height: 40px;
             padding: 7px 12px;
             font-size: 14px
@@ -77,51 +68,45 @@
             border-color: #a8c7bc
         }
 
-        .nav-utilities {
-            justify-content: space-between
-        }
-
-        .quick-add,
-        .all-sections {
-            position: relative
-        }
-
-        .quick-add summary,
-        .all-sections summary {
-            list-style: none;
-            display: inline-flex;
-            align-items: center;
-            border: 1px solid var(--b);
-            border-radius: 12px;
-            background: #fff;
-            font-weight: 650;
-            cursor: pointer
-        }
-
-        .quick-add summary::-webkit-details-marker,
-        .all-sections summary::-webkit-details-marker {
-            display: none
-        }
-
-        .nav-menu {
-            position: absolute;
-            z-index: 2;
-            top: calc(100% + 6px);
-            right: 0;
-            display: grid;
+        .floating-tab-bar {
+            position: fixed;
+            z-index: 10;
+            left: 50%;
+            bottom: max(14px, env(safe-area-inset-bottom));
+            display: flex;
+            align-items: stretch;
             gap: 4px;
-            min-width: 190px;
-            padding: 8px;
-            border: 1px solid var(--b);
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 8px 20px rgba(23, 34, 30, .15)
+            width: min(calc(100vw - 24px), 520px);
+            padding: 6px;
+            border: 1px solid rgba(217, 225, 221, .9);
+            border-radius: 22px;
+            background: rgba(255, 255, 255, .94);
+            box-shadow: 0 10px 30px rgba(23, 34, 30, .18);
+            backdrop-filter: blur(12px);
+            transform: translateX(-50%)
         }
 
-        .nav-menu button {
-            min-height: 40px;
-            text-align: left;
-            font-size: 14px
+        .floating-tab-bar .nav-group {
+            flex: 1;
+            display: grid;
+            justify-items: center;
+            align-content: center;
+            gap: 2px;
+            min-width: 0;
+            min-height: 58px;
+            padding: 6px 4px;
+            color: var(--m);
+            font-size: 11px;
+            line-height: 1.1
+        }
+
+        .floating-tab-bar .nav-group.active {
+            color: var(--g)
+        }
+
+        .nav-group-icon {
+            font-size: 20px;
+            line-height: 1
         }
 
         button:focus-visible,
@@ -691,16 +676,6 @@
         }
 
         @media(max-width:600px) {
-
-            .nav-primary {
-                display: grid;
-                grid-template-columns: 1fr 1fr
-            }
-
-            .nav-primary .nav-group {
-                width: 100%
-            }
-
             .nav-secondary {
                 flex-wrap: nowrap;
                 overflow-x: auto;
@@ -709,25 +684,6 @@
 
             .nav-secondary .tab {
                 flex: 0 0 auto;
-            }
-
-            .nav-utilities {
-                align-items: stretch
-            }
-
-            .nav-utilities details {
-                flex: 1
-            }
-
-            .nav-utilities summary {
-                justify-content: center;
-                width: 100%
-            }
-
-            .nav-menu {
-                left: 0;
-                right: auto;
-                min-width: max-content
             }
 
             .grid,

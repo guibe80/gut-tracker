@@ -91,22 +91,21 @@ test.describe('Grouped navigation', () => {
     }
   });
 
-  test('a group, quick add, and all sections each open the requested pane', async ({ page }) => {
+  test('the floating group bar opens its destination options and pane', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.locator('#app').evaluate(element => element.classList.remove('hidden'));
 
-    await page.locator('.nav-group[data-nav-group="review"]').click();
+    await expect(page.locator('.floating-tab-bar')).toBeVisible();
+    await page.locator('.floating-tab-bar .nav-group[data-nav-group="review"]').click();
     await expect(page.locator('#dayview')).toBeVisible();
     await expect(page.locator('.tab[data-tab="dayview"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('.tab[data-tab="timeline"]')).toBeVisible();
 
-    await page.locator('summary', { hasText: 'Quick add' }).click();
-    await page.locator('[data-quick-tab="glucose"]').click();
+    await page.locator('.floating-tab-bar .nav-group[data-nav-group="log"]').click();
+    await page.locator('.tab[data-tab="glucose"]').click();
     await expect(page.locator('#glucose')).toBeVisible();
-
-    await page.locator('summary', { hasText: 'All sections' }).click();
-    await page.locator('[data-all-tab="data"]').click();
-    await expect(page.locator('#data')).toBeVisible();
+    await expect(page.locator('[data-quick-tab], [data-all-tab]')).toHaveCount(0);
   });
 });
 
