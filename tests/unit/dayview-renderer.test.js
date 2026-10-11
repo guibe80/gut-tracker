@@ -105,6 +105,38 @@ describe('Day View chart interactions', () => {
     test('includes the food value alongside its label in tooltip details', () => {
         assert.equal(sandbox.dvGetEventTooltipDetail('food', { detail: 'Oats', value: 42 }), 'Oats · 42g carbs');
     });
+
+    test('configures gut and bowel charts with their rating scales', () => {
+        const originalCreateEmojiChart = sandbox.createEmojiChart;
+        const originalGetElementById = sandbox.document.getElementById;
+        let config;
+        sandbox.createEmojiChart = (canvas, chartConfig) => {
+            config = chartConfig;
+            return chartConfig;
+        };
+        sandbox.document.getElementById = id => ({ id });
+
+        try {
+            for (const [type, value, min, max, title] of [
+                ['gut', 7, 0, 10, 'Severity (0-10)'],
+                ['bowel', 3, 1, 7, 'Bristol type'],
+            ]) {
+                const events = [{ t: '2025-01-15T10:00:00.000Z', value }];
+                const yaxis = { min, max, stepSize: 1, label: title };
+                const range = sandbox.dvGetYAxisRange(type, events, yaxis);
+                sandbox.dvCreateLaneChart(type, events, yaxis, range.yMin, range.yMax, new Date('2025-01-15T00:00:00.000Z'), null);
+
+                assert.equal(config.options.scales.y.min, min);
+                assert.equal(config.options.scales.y.max, max);
+                assert.equal(config.options.scales.y.ticks.stepSize, 1);
+                assert.equal(config.options.scales.y.title.text, title);
+                assert.equal(config.data.datasets[0].data[0].y, value);
+            }
+        } finally {
+            sandbox.createEmojiChart = originalCreateEmojiChart;
+            sandbox.document.getElementById = originalGetElementById;
+        }
+    });
 });
 
 describe('dvGetEvents', () => {
@@ -175,6 +207,7 @@ describe('dvGetEvents', () => {
         assert.strictEqual(events.length, 1);
         assert.strictEqual(events[0].type, 'gut');
         assert.strictEqual(events[0].detail, 'bloating · 7/10');
+        assert.strictEqual(events[0].value, 7);
         assert.strictEqual(events[0].t, '2025-01-15T10:00:00.000Z');
     });
 
@@ -191,6 +224,7 @@ describe('dvGetEvents', () => {
         assert.strictEqual(events.length, 1);
         assert.strictEqual(events[0].type, 'bowel');
         assert.strictEqual(events[0].detail, 'Bristol 3');
+        assert.strictEqual(events[0].value, 3);
         assert.strictEqual(events[0].t, '2025-01-15T09:00:00.000Z');
     });
 
