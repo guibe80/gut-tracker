@@ -63,11 +63,55 @@
                     </div><button id="sync" class="sync syncing" type="button" aria-label="Reconnect to Supabase">🟠 syncing</button>
                 </div>
             </header>
-            <nav><button class="tab active" data-tab="food">🍽️ Food</button><button class="tab" data-tab="fiveaday">🍎 5 A Day</button><button class="tab" data-tab="glucose">🩸
-                    Glucose</button><button class="tab" data-tab="symptoms">🫃 Gut</button><button class="tab"
-                    data-tab="bowel">🚽 Bowel</button><button class="tab" data-tab="weight">⚖️ Weight</button><button class="tab" data-tab="water">💧 Water</button><button class="tab" data-tab="timeline">🕒
-                    Timeline</button><button class="tab" data-tab="dayview">📅 Day view</button><button class="tab" data-tab="insights">📊 Insights</button><button class="tab"
-                    data-tab="data">☁️ Data</button></nav>
+            <nav class="app-nav" aria-label="Tracker sections">
+                <div class="nav-primary" role="group" aria-label="Section groups">
+                    <button type="button" class="nav-group active" data-nav-group="log" aria-pressed="true">Log</button>
+                    <button type="button" class="nav-group" data-nav-group="gut-body" aria-pressed="false">Gut &amp; body</button>
+                    <button type="button" class="nav-group" data-nav-group="review" aria-pressed="false">Review</button>
+                    <button type="button" class="nav-group" data-nav-group="manage" aria-pressed="false">Manage</button>
+                </div>
+                <div class="nav-secondary" aria-label="Log sections">
+                    <button type="button" class="tab active" data-tab="food" data-nav-group="log" aria-current="page">🍽️ Food</button>
+                    <button type="button" class="tab" data-tab="fiveaday" data-nav-group="log">🍎 5 A Day</button>
+                    <button type="button" class="tab" data-tab="glucose" data-nav-group="log">🩸 Glucose</button>
+                    <button type="button" class="tab" data-tab="water" data-nav-group="log">💧 Water</button>
+                    <button type="button" class="tab hidden" data-tab="symptoms" data-nav-group="gut-body">🫃 Gut symptoms</button>
+                    <button type="button" class="tab hidden" data-tab="bowel" data-nav-group="gut-body">🚽 Bowel</button>
+                    <button type="button" class="tab hidden" data-tab="weight" data-nav-group="gut-body">⚖️ Weight</button>
+                    <button type="button" class="tab hidden" data-tab="dayview" data-nav-group="review">📅 Day view</button>
+                    <button type="button" class="tab hidden" data-tab="timeline" data-nav-group="review">🕒 Timeline</button>
+                    <button type="button" class="tab hidden" data-tab="insights" data-nav-group="review">📊 Insights</button>
+                    <button type="button" class="tab hidden" data-tab="data" data-nav-group="manage">☁️ Data</button>
+                </div>
+                <div class="nav-utilities">
+                    <details class="quick-add">
+                        <summary>＋ Quick add</summary>
+                        <div class="nav-menu" aria-label="Quick add">
+                            <button type="button" data-quick-tab="food">🍽️ Meal</button>
+                            <button type="button" data-quick-tab="glucose">🩸 Glucose</button>
+                            <button type="button" data-quick-tab="symptoms">🫃 Symptom</button>
+                            <button type="button" data-quick-tab="bowel">🚽 Bowel movement</button>
+                            <button type="button" data-quick-tab="water">💧 Water</button>
+                        </div>
+                    </details>
+                    <details class="all-sections">
+                        <summary>All sections</summary>
+                        <div class="nav-menu" aria-label="All tracker sections">
+                            <button type="button" data-all-tab="food">🍽️ Food</button>
+                            <button type="button" data-all-tab="fiveaday">🍎 5 A Day</button>
+                            <button type="button" data-all-tab="glucose">🩸 Glucose</button>
+                            <button type="button" data-all-tab="water">💧 Water</button>
+                            <button type="button" data-all-tab="symptoms">🫃 Gut symptoms</button>
+                            <button type="button" data-all-tab="bowel">🚽 Bowel</button>
+                            <button type="button" data-all-tab="weight">⚖️ Weight</button>
+                            <button type="button" data-all-tab="dayview">📅 Day view</button>
+                            <button type="button" data-all-tab="timeline">🕒 Timeline</button>
+                            <button type="button" data-all-tab="insights">📊 Insights</button>
+                            <button type="button" data-all-tab="data">☁️ Data</button>
+                        </div>
+                    </details>
+                </div>
+            </nav>
 
             <section id="food" class="pane">
                 <form id="foodForm" class="card">

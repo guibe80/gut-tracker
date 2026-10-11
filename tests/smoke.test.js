@@ -10,7 +10,7 @@ const versionPattern = /V\d+\.\d+\.\d+/i;
  * 2. Auth screen visible when not signed in
  * 3. Setup link visible on auth screen
  * 4. Service worker registers
- * 5. All navigation tab buttons exist
+ * 5. Grouped navigation exposes every tracker section
  * 6. PWA manifest is valid
  * 7. Setup page loads with key input
  *
@@ -77,14 +77,36 @@ test.describe('Service worker', () => {
   });
 });
 
-test.describe('Navigation tabs', () => {
-  test('all tab buttons exist', async ({ page }) => {
+test.describe('Grouped navigation', () => {
+  test('all tab buttons exist within their groups', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    const groups = ['log', 'gut-body', 'review', 'manage'];
+    for (const group of groups) {
+      await expect(page.locator(`.nav-group[data-nav-group="${group}"]`)).toHaveCount(1);
+    }
     const tabs = ['food', 'fiveaday', 'glucose', 'symptoms', 'bowel', 'weight', 'water', 'timeline', 'dayview', 'insights', 'data'];
     for (const tab of tabs) {
       await expect(page.locator(`.tab[data-tab="${tab}"]`)).toHaveCount(1);
     }
+  });
+
+  test('a group, quick add, and all sections each open the requested pane', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await page.locator('#app').evaluate(element => element.classList.remove('hidden'));
+
+    await page.locator('.nav-group[data-nav-group="review"]').click();
+    await expect(page.locator('#dayview')).toBeVisible();
+    await expect(page.locator('.tab[data-tab="dayview"]')).toHaveAttribute('aria-current', 'page');
+
+    await page.locator('summary', { hasText: 'Quick add' }).click();
+    await page.locator('[data-quick-tab="glucose"]').click();
+    await expect(page.locator('#glucose')).toBeVisible();
+
+    await page.locator('summary', { hasText: 'All sections' }).click();
+    await page.locator('[data-all-tab="data"]').click();
+    await expect(page.locator('#data')).toBeVisible();
   });
 });
 
