@@ -17,6 +17,7 @@ const filesToLoad = [
     path.resolve(__dirname, '../../utils/html.js'),
     path.resolve(__dirname, '../../utils/data-mapping.js'),
     path.resolve(__dirname, '../../services/data-service.js'),
+    path.resolve(__dirname, '../../services/migration.js'),
     path.resolve(__dirname, '../../ui/dayview-renderer.js'),
     path.resolve(__dirname, '../../ui/render.js'),
     path.resolve(__dirname, '../../services/v2-import.js'),
