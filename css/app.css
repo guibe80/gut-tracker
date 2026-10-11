@@ -116,32 +116,32 @@
 
         .dayview .dv-timeline {
             position: relative;
-            background: #fff;
-            border: 1px solid var(--b);
-            border-radius: 16px;
-            padding: 20px 16px 24px;
             margin-bottom: 14px;
         }
 
         .dayview .dv-lanes {
             position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
         .dayview .dv-lane {
             position: relative;
-            height: var(--chart-height);
-            margin: 6px 0;
-            border-radius: 6px;
-            border: 1px dashed var(--b);
-            background: #f9faf9;
+            margin: 0;
+        }
+
+        .dayview .dv-lane-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
         }
 
         .dayview .dv-chart-wrap {
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
+            position: relative;
+            height: var(--chart-height);
         }
 
         .dayview .dv-chart-wrap canvas {
@@ -150,18 +150,8 @@
         }
 
         .dayview .dv-lane-label {
-            position: absolute;
-            left: -1px;
-            top: -7px;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: var(--m);
-            background: #f5f7f6;
-            padding: 0 6px;
-            border-radius: 4px;
-            white-space: nowrap;
+            margin: 0;
+            font-size: 14px;
         }
 
         .dayview .dv-event {
@@ -279,7 +269,7 @@
             border-radius: 3px;
         }
 
-        .dayview .dv-info { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); text-align: right; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; color: #fff; opacity: 0.85; white-space: nowrap; z-index: 3; }
+        .dayview .dv-info { flex: 0 0 auto; text-align: right; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; color: #fff; opacity: 0.85; white-space: nowrap; }
         .dayview .dv-trend { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
 
         .dayview .dv-empty {

@@ -99,8 +99,8 @@ function dvGetEvents(data, type) {
     switch (type) {
         case 'food': return data.meals.map(x => ({ type: 'food', t: x.meal_time, tz: parseTzNotes(x.notes), detail: data.mealFoods.filter(f => f.meal_id === x.id).map(f => f.food_name).filter(Boolean).join(', '), value: x.estimated_carbohydrate_g || 0 })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
         case 'glucose': return data.glucose.map(x => ({ type: 'glucose', t: x.measured_at, tz: parseTzNotes(x.notes), detail: x.glucose_mmol_l + ' mmol/L', value: x.glucose_mmol_l })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
-        case 'gut': return data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10' })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
-        case 'bowel': return data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: 'Bristol ' + x.bristol_type })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+        case 'gut': return data.symptoms.map(x => ({ type: 'gut', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: (x.symptom_type || 'Symptom') + ' · ' + (x.severity ?? 0) + '/10', value: Number(x.severity ?? 0) })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
+        case 'bowel': return data.bowels.map(x => ({ type: 'bowel', t: x.occurred_at, tz: parseTzNotes(x.notes), detail: 'Bristol ' + (x.bristol_type ?? '—'), value: x.bristol_type == null ? null : Number(x.bristol_type) })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
         case 'weight': return data.weights.map(x => ({ type: 'weight', t: x.measured_at, tz: parseTzNotes(x.notes), detail: Number(x.weight_kg).toFixed(2) + ' kg', value: x.weight_kg })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
         case 'water': return (data.waterIntake || []).map(x => ({ type: 'water', t: x.consumed_at, tz: parseTzNotes(x.notes), detail: Number(x.amount_ml) + ' ml', value: x.amount_ml })).filter(filter).sort((a, b) => new Date(a.t) - new Date(b.t));
         default: return [];
@@ -129,7 +129,7 @@ function dvGetYAxisRange(type, events, yaxis) {
     let yMin, yMax;
     if (!yaxis) return { yMin, yMax };
 
-    if (type === 'glucose') {
+    if (Number.isFinite(yaxis.min) && Number.isFinite(yaxis.max)) {
         yMin = yaxis.min;
         yMax = yaxis.max;
     } else if (yaxis.maxOnly && events.length > 0) {
@@ -226,7 +226,7 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart, timeWindow
                 label: '',
                 data: events.map(e => ({
                     x: new Date(e.t).getTime(),
-                    y: type === 'gut' || type === 'bowel' ? 0.5 : (e.value || 0)
+                    y: e.value == null ? null : e.value
                 })),
                 emoji: DV_LANE_ICON[type],
                 borderColor: `var(--dv-lane-${type})`,
@@ -238,7 +238,8 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart, timeWindow
         yScale: hasYAxis ? {
             min: yMin,
             max: yMax,
-            beginAtZero: type === 'food' || type === 'water' || type === 'gut' || type === 'bowel',
+            beginAtZero: type === 'food' || type === 'water' || type === 'gut',
+            ...(yaxis.stepSize ? { ticks: { stepSize: yaxis.stepSize } } : {}),
         } : {
             display: false,
         },
@@ -298,6 +299,8 @@ function dvBuild() {
 
     const YAXIS_RANGES = {
         glucose: { min: 4, max: 15, label: 'mmol/L' },
+        gut: { min: 0, max: 10, stepSize: 1, label: 'Severity (0-10)' },
+        bowel: { min: 1, max: 7, stepSize: 1, label: 'Bristol type' },
         weight: { auto: true, label: 'kg' },
         food: { auto: true, label: 'g carbs' },
         water: { maxOnly: true, label: 'ml' }
@@ -325,9 +328,11 @@ function dvBuild() {
             infoBadge = `<div class="dv-info" style="background:var(--dv-lane-water)">${events.reduce((s,e) => s + e.value, 0).toFixed(0)} ml</div>`;
         }
 
-        html += `<div class="dv-lane" data-dv-lane="${type}" style="margin-top: ${type === visibleTypes[0] ? 0 : 8}px">
-            <span class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</span>
-            ${infoBadge}
+        html += `<div class="card dv-lane" data-dv-lane="${type}">
+            <div class="dv-lane-header">
+                <h3 class="dv-lane-label">${DV_LANE_ICON[type]} ${DV_LANE_LABEL[type]}</h3>
+                ${infoBadge}
+            </div>
             <div class="dv-chart-wrap">
                 <canvas id="dv-chart-${type}"></canvas>
             </div>

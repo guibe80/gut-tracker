@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -49,13 +51,15 @@ export type Database = {
           urgency?: number | null
           user_id?: string
         }
-        Relationships: [{
-          foreignKeyName: "bowel_movements_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "profiles"
-          referencedColumns: ["id"]
-        }]
+        Relationships: [
+          {
+            foreignKeyName: "bowel_movements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_context: {
         Row: {
@@ -106,13 +110,15 @@ export type Database = {
           user_id?: string
           water_litres?: number | null
         }
-        Relationships: [{
-          foreignKeyName: "daily_context_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "profiles"
-          referencedColumns: ["id"]
-        }]
+        Relationships: [
+          {
+            foreignKeyName: "daily_context_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       foods: {
         Row: {
@@ -164,7 +170,7 @@ export type Database = {
           context?: string | null
           created_at?: string
           estimated_meal_carbs_g?: number | null
-          glucose_mmol_l?: never
+          glucose_mmol_l: number
           id?: string
           meal_id?: string | null
           meal_relationship?: string | null
@@ -204,7 +210,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       gut_symptoms: {
@@ -255,7 +261,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       meal_foods: {
@@ -309,7 +315,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meals"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       meals: {
@@ -349,13 +355,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [{
-          foreignKeyName: "meals_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "profiles"
-          referencedColumns: ["id"]
-        }]
+        Relationships: [
+          {
+            foreignKeyName: "meals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -374,6 +382,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      water_intake: {
+        Row: {
+          amount_ml: number
+          consumed_at: string
+          created_at: string
+          id: string
+          meal_id: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          amount_ml: number
+          consumed_at: string
+          created_at?: string
+          id?: string
+          meal_id?: string | null
+          source: string
+          user_id: string
+        }
+        Update: {
+          amount_ml?: number
+          consumed_at?: string
+          created_at?: string
+          id?: string
+          meal_id?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "water_intake_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "water_intake_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weight_entries: {
         Row: {
@@ -513,8 +566,27 @@ export type Enums<
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Enums"][EnumName]
-  : never
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {
