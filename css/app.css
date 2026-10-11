@@ -37,11 +37,97 @@
             font-size: 13px
         }
 
-        nav {
+        .app-nav {
+            margin: 14px 0;
+            display: grid;
+            gap: 8px
+        }
+
+        .nav-primary,
+        .nav-secondary,
+        .nav-utilities {
             display: flex;
             gap: 8px;
-            overflow: auto;
-            margin: 14px 0
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .nav-primary {
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--b)
+        }
+
+        .nav-group,
+        .tab,
+        .nav-utilities summary {
+            min-height: 40px;
+            padding: 7px 12px;
+            font-size: 14px
+        }
+
+        .nav-group {
+            background: transparent;
+            border-color: transparent;
+            border-radius: 8px
+        }
+
+        .nav-group.active,
+        button.tab.active {
+            background: #e6f1ed;
+            border-color: #a8c7bc
+        }
+
+        .nav-utilities {
+            justify-content: space-between
+        }
+
+        .quick-add,
+        .all-sections {
+            position: relative
+        }
+
+        .quick-add summary,
+        .all-sections summary {
+            list-style: none;
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid var(--b);
+            border-radius: 12px;
+            background: #fff;
+            font-weight: 650;
+            cursor: pointer
+        }
+
+        .quick-add summary::-webkit-details-marker,
+        .all-sections summary::-webkit-details-marker {
+            display: none
+        }
+
+        .nav-menu {
+            position: absolute;
+            z-index: 2;
+            top: calc(100% + 6px);
+            right: 0;
+            display: grid;
+            gap: 4px;
+            min-width: 190px;
+            padding: 8px;
+            border: 1px solid var(--b);
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 8px 20px rgba(23, 34, 30, .15)
+        }
+
+        .nav-menu button {
+            min-height: 40px;
+            text-align: left;
+            font-size: 14px
+        }
+
+        button:focus-visible,
+        summary:focus-visible {
+            outline: 3px solid #1c7ed6;
+            outline-offset: 2px
         }
 
         .dayview {
@@ -367,11 +453,6 @@
             color: var(--r)
         }
 
-        button.tab.active {
-            background: #e6f1ed;
-            border-color: #a8c7bc
-        }
-
         .card {
             background: #fff;
             border: 1px solid var(--b);
@@ -610,6 +691,44 @@
         }
 
         @media(max-width:600px) {
+
+            .nav-primary {
+                display: grid;
+                grid-template-columns: 1fr 1fr
+            }
+
+            .nav-primary .nav-group {
+                width: 100%
+            }
+
+            .nav-secondary {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 2px
+            }
+
+            .nav-secondary .tab {
+                flex: 0 0 auto;
+            }
+
+            .nav-utilities {
+                align-items: stretch
+            }
+
+            .nav-utilities details {
+                flex: 1
+            }
+
+            .nav-utilities summary {
+                justify-content: center;
+                width: 100%
+            }
+
+            .nav-menu {
+                left: 0;
+                right: auto;
+                min-width: max-content
+            }
 
             .grid,
             .checks {

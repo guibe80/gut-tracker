@@ -23,6 +23,44 @@ function setFormMode(formId, editing) {
     if (button) button.textContent = editing ? button.dataset.updateLabel : button.dataset.saveLabel;
 }
 
+const tabGroups = {
+    food: 'log', fiveaday: 'log', glucose: 'log', water: 'log',
+    symptoms: 'gut-body', bowel: 'gut-body', weight: 'gut-body',
+    dayview: 'review', timeline: 'review', insights: 'review',
+    data: 'manage'
+};
+
+const lastTabByGroup = {
+    log: 'food',
+    'gut-body': 'symptoms',
+    review: 'dayview',
+    manage: 'data'
+};
+
+function openTab(tab) {
+    const group = tabGroups[tab];
+    const pane = $(tab);
+    if (!group || !pane) return;
+
+    lastTabByGroup[group] = tab;
+    document.querySelectorAll('.pane').forEach(element => element.classList.add('hidden'));
+    pane.classList.remove('hidden');
+
+    document.querySelectorAll('.tab').forEach(button => {
+        const isSelected = button.dataset.tab === tab;
+        button.classList.toggle('active', isSelected);
+        button.classList.toggle('hidden', button.dataset.navGroup !== group);
+        if (isSelected) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+    });
+    document.querySelectorAll('.nav-group').forEach(button => {
+        const isSelected = button.dataset.navGroup === group;
+        button.classList.toggle('active', isSelected);
+        button.setAttribute('aria-pressed', String(isSelected));
+    });
+    document.querySelector('.nav-secondary')?.setAttribute('aria-label', `${document.querySelector(`.nav-group[data-nav-group="${group}"]`)?.textContent.trim() || 'Tracker'} sections`);
+}
+
 function openEditForm(table, id) {
     const record = ({
         meals, glucose, symptoms, bowels, weights
@@ -34,7 +72,7 @@ function openEditForm(table, id) {
     }
     const tab = { meals: 'food', glucose_readings: 'glucose', gut_symptoms: 'symptoms', bowel_movements: 'bowel', weight_entries: 'weight' }[table];
     const fields = localDateTime(record.meal_time || record.measured_at || record.occurred_at);
-    document.querySelector(`.tab[data-tab="${tab}"]`)?.click();
+    openTab(tab);
     editState = { table, id };
     setFormMode(tab + 'Form', true);
     if (table === 'meals') {
@@ -420,12 +458,12 @@ function bindEventHandlers() {
         $(id).onclick = () => { editState = null; setFormMode(form, false); $(form).reset(); reset(); if (id === 'gclear') resetMealTimingState() };
     }
 
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => {
-        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-        document.querySelectorAll('.pane').forEach(x => x.classList.add('hidden'));
-        btn.classList.add('active');
-        $(btn.dataset.tab).classList.remove('hidden');
+    // Grouped navigation and direct pane switching.
+    document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => openTab(btn.dataset.tab));
+    document.querySelectorAll('.nav-group').forEach(btn => btn.onclick = () => openTab(lastTabByGroup[btn.dataset.navGroup]));
+    document.querySelectorAll('[data-quick-tab], [data-all-tab]').forEach(btn => btn.onclick = () => {
+        openTab(btn.dataset.quickTab || btn.dataset.allTab);
+        btn.closest('details')?.removeAttribute('open');
     });
 
     // List entry actions (edit/delete)
