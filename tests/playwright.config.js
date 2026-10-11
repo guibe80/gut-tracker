@@ -1,5 +1,6 @@
 module.exports = {
   testDir: '.',
+  testIgnore: '**/unit/**',
   timeout: 15000,
   fullyParallel: false,
   use: {

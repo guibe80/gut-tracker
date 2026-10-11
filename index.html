@@ -19,6 +19,9 @@
     <script src="./utils/data-mapping.js"></script>
     <script src="./services/data-service.js"></script>
     <script src="./services/v2-import.js"></script>
+    <script src="./services/five-a-day-catalogue.js"></script>
+    <script src="./services/five-a-day-repository.js"></script>
+    <script src="./utils/five-a-day-calculator.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="./ui/chartjs-config.js"></script>
     <script src="./ui/dayview-renderer.js"></script>
@@ -28,6 +31,7 @@
     <script src="./ui/timing-utils.js"></script>
     <script src="./ui/water-intake.js"></script>
     <script src="./ui/insights-view.js"></script>
+    <script src="./ui/five-a-day.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
@@ -59,7 +63,7 @@
                     </div><button id="sync" class="sync syncing" type="button" aria-label="Reconnect to Supabase">🟠 syncing</button>
                 </div>
             </header>
-            <nav><button class="tab active" data-tab="food">🍽️ Food</button><button class="tab" data-tab="glucose">🩸
+            <nav><button class="tab active" data-tab="food">🍽️ Food</button><button class="tab" data-tab="fiveaday">🍎 5 A Day</button><button class="tab" data-tab="glucose">🩸
                     Glucose</button><button class="tab" data-tab="symptoms">🫃 Gut</button><button class="tab"
                     data-tab="bowel">🚽 Bowel</button><button class="tab" data-tab="weight">⚖️ Weight</button><button class="tab" data-tab="water">💧 Water</button><button class="tab" data-tab="timeline">🕒
                     Timeline</button><button class="tab" data-tab="dayview">📅 Day view</button><button class="tab" data-tab="insights">📊 Insights</button><button class="tab"
@@ -303,6 +307,102 @@
                 </div>
             </section>
 
+            <section id="fiveaday" class="pane hidden fiveaday">
+                <div class="card fiveaday-intro">
+                    <h2>🍎 5 A Day</h2>
+                    <p>Track qualifying fruit and vegetables towards the UK adult recommendation of at least five portions a day.</p>
+                    <p class="fiveaday-demo-notice">Entries are saved to your private account. 5 A Day records are separate from your meal log and can be reviewed or deleted here.</p>
+                    <div class="fiveaday-date">
+                        <button type="button" id="fiveADayPrev" aria-label="Previous day">◀</button>
+                        <label for="fiveADaySelectedDate">Selected day</label>
+                        <input type="date" id="fiveADaySelectedDate">
+                        <button type="button" id="fiveADayNext" aria-label="Next day">▶</button>
+                        <button type="button" id="fiveADayToday">Today</button>
+                    </div>
+                </div>
+
+                <div class="card fiveaday-progress-card" id="fiveADayProgressCard">
+                    <div class="fiveaday-progress-heading">
+                        <h3 id="fiveADayCount">0 of 5 portions</h3>
+                        <span id="fiveADayRemaining" class="muted"></span>
+                    </div>
+                    <div id="fiveADayProgress" class="fiveaday-progress" role="progressbar" aria-label="Confirmed 5 A Day progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0" aria-valuetext="0 of 5 portions">
+                        <div id="fiveADayProgressFill" class="fiveaday-progress-fill"></div>
+                    </div>
+                    <div id="fiveADayMarkers" class="fiveaday-markers" aria-hidden="true"></div>
+                    <div id="fiveADayCategoryBreakdown" class="fiveaday-breakdown" aria-label="Portions by category"></div>
+                    <p id="fiveADayPendingNotice" class="muted fiveaday-pending hidden"></p>
+                </div>
+
+                <div class="card">
+                    <h3 id="fiveADayFormTitle">Add a food</h3>
+                    <p class="muted">Choose a catalogue food or enter one not listed. New and edited entries need your confirmation before they count.</p>
+                    <form id="fiveADayForm">
+                        <div class="grid">
+                            <div class="full">
+                                <label for="fiveADayFoodSearch">Search food catalogue</label>
+                                <input type="search" id="fiveADayFoodSearch" list="fiveADayCatalogueOptions" autocomplete="off" placeholder="Start typing, or enter a food not listed">
+                                <datalist id="fiveADayCatalogueOptions"></datalist>
+                            </div>
+                            <div id="fiveADayManualNameWrap" class="full hidden">
+                                <label for="fiveADayManualName">Food name (manual entry)</label>
+                                <input type="text" id="fiveADayManualName" maxlength="120">
+                            </div>
+                            <div>
+                                <label for="fiveADayCategory">Category</label>
+                                <select id="fiveADayCategory">
+                                    <option value="fruit">Fruit</option>
+                                    <option value="vegetable">Vegetables</option>
+                                    <option value="beans_pulses">Beans and pulses</option>
+                                    <option value="dried_fruit">Dried fruit</option>
+                                    <option value="juice_smoothie">Juice and smoothies</option>
+                                    <option value="mixed_dish">Mixed dish (known produce weight only)</option>
+                                    <option value="excluded">Does not count</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="fiveADayQuantity">Amount consumed (<span id="fiveADayUnitLabel">g</span>)</label>
+                                <div class="fiveaday-amount">
+                                    <input type="number" id="fiveADayQuantity" min="0.1" step="any" required>
+                                    <input type="hidden" id="fiveADayUnit" value="g">
+                                </div>
+                            </div>
+                            <div id="fiveADayQualifyingWeightWrap" class="full hidden">
+                                <label for="fiveADayQualifyingWeight">Known qualifying fruit and vegetable weight (g)</label>
+                                <input type="number" id="fiveADayQualifyingWeight" min="0" step="any">
+                                <span class="muted">Do not enter the full dish weight. Only use a known fruit and vegetable amount.</span>
+                            </div>
+                            <div><label for="fiveADayEntryDate">Date consumed</label><input type="date" id="fiveADayEntryDate" required></div>
+                            <div><label for="fiveADayTime">Time consumed</label><input type="time" id="fiveADayTime" required></div>
+                        </div>
+                        <p id="fiveADayGuidance" class="muted fiveaday-guidance" aria-live="polite"></p>
+                        <p id="fiveADayContributionPreview" class="muted" aria-live="polite"></p>
+                        <p class="muted">Calculations follow adult NHS portion guidance. Juice and smoothies must qualify as 100% juice or fruit/vegetable smoothies and share a 150ml daily cap. Manually entered amounts are estimates until reviewed and confirmed.</p>
+                        <div class="row">
+                            <button type="submit" id="fiveADaySave" class="primary">Add for review</button>
+                            <button type="button" id="fiveADayCancelEdit" class="hidden">Cancel edit</button>
+                        </div>
+                        <p id="fiveADayMessage" class="muted fiveaday-message" role="status" aria-live="polite"></p>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3>Foods logged</h3>
+                    <div id="fiveADayEntries" aria-live="polite"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Ideas for another portion</h3>
+                    <p class="muted">These are suggestions only and do not count until you log and confirm them.</p>
+                    <ul class="fiveaday-suggestions">
+                        <li>An apple, banana or orange</li>
+                        <li>A handful of berries</li>
+                        <li>Carrots, broccoli or leafy greens with a meal</li>
+                        <li>Beans or chickpeas (up to one portion daily)</li>
+                    </ul>
+                </div>
+            </section>
+
             <section id="timeline" class="pane hidden">
                 <div class="card">
                     <div class="section-title">
@@ -417,6 +517,7 @@
         installHbA1cTrend();
         installInsightsView();
         initWaterIntake();
+        initFiveADayTracker();
     </script>
 </body>
 

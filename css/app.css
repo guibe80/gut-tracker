@@ -210,6 +210,52 @@
         .chart-popup { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #17221e; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 10px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.12s ease; z-index: 10; }
         .chart-event:hover .chart-popup { opacity: 1; }
 
+        /* 5 A Day tracker */
+        .fiveaday-demo-notice { border-left: 4px solid #b8791c; background: #fff8e8; padding: 10px 12px; border-radius: 8px; font-size: 13px; }
+        .fiveaday-date { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .fiveaday-date label { margin: 0; }
+        .fiveaday-date input { width: auto; flex: 1 1 150px; }
+        .fiveaday-progress-card { overflow: hidden; }
+        .fiveaday-progress-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .fiveaday-progress-heading h3 { margin: 0; }
+        .fiveaday-progress { height: 16px; background: #e8eeeb; border-radius: 999px; overflow: hidden; margin: 14px 0 8px; }
+        .fiveaday-progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #77a940, #1f6f5c); transition: width 450ms ease; }
+        .fiveaday-target-reached .fiveaday-progress-fill { background: linear-gradient(90deg, #77a940, #1f6f5c); }
+        .fiveaday-markers { display: flex; gap: 8px; min-height: 30px; align-items: center; margin: 8px 0 12px; }
+        .fiveaday-marker { color: #87938e; font-size: 20px; line-height: 1; }
+        .fiveaday-marker.is-filled { display: inline-block; animation: fiveaday-pop 300ms ease-out both; }
+        @keyframes fiveaday-pop { from { transform: scale(.65); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+        .fiveaday-breakdown { display: flex; flex-wrap: wrap; gap: 8px; }
+        .fiveaday-category { border-radius: 999px; background: #eef4f1; padding: 4px 9px; font-size: 12px; }
+        .fiveaday-pending { margin-bottom: 0; }
+        .fiveaday-amount { display: flex; gap: 8px; }
+        .fiveaday-amount input { flex: 1; }
+        .fiveaday-amount select { width: 84px; }
+        .fiveaday-guidance { margin-bottom: 0; }
+        .fiveaday-message { min-height: 1.3em; margin-bottom: 0; }
+        .fiveaday-message.err { color: var(--r); }
+        .fiveaday-entry { display: flex; justify-content: space-between; gap: 14px; border-top: 1px solid var(--b); padding: 12px 0; }
+        .fiveaday-entry:first-child { border-top: 0; }
+        .fiveaday-entry-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .fiveaday-entry-copy .muted { overflow-wrap: anywhere; }
+        .fiveaday-entry-actions { align-items: flex-start; justify-content: flex-end; }
+        .fiveaday-status { font-size: 12px; font-weight: 700; }
+        .fiveaday-status.confirmed { color: var(--g); }
+        .fiveaday-status.pending { color: #8a5a00; }
+        .fiveaday-suggestions { margin-bottom: 0; padding-left: 22px; }
+        .fiveaday-suggestions li + li { margin-top: 6px; }
+
+        @media (max-width: 560px) {
+            .fiveaday-entry { flex-direction: column; }
+            .fiveaday-entry-actions { justify-content: flex-start; }
+            .fiveaday-progress-heading { align-items: flex-start; flex-direction: column; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .fiveaday-progress-fill { transition: none; }
+            .fiveaday-marker.is-filled { animation: none; }
+        }
+
         .dayview .dv-event-popup {
             position: absolute;
             bottom: calc(100% + 8px);

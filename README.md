@@ -102,6 +102,16 @@ gut-tracker/
 - **`version.js`** is the single source of truth for `APP_VERSION`. It is imported by `sw.js`, `index.html`, and `setup.html`.
 - **`VERSION` file** mirrors the version string in `version.js`. Keep both aligned for releases.
 
+## 5 A Day tracker
+
+The 5 A Day tab stores entries in the user's Supabase `five_a_day_entries` table. Data access is isolated behind `services/five-a-day-repository.js`, uses the authenticated user's ID, and relies on table row-level security. The browser queries the selected local day and calculates its confirmed progress from the saved entries.
+
+Confirmed entries use adult NHS portion guidance: 80g for most fruit and vegetables, around 30g for dried fruit, up to one combined portion (150ml) for juice and smoothies, and at most one portion total from beans and pulses. Potatoes, sweet potatoes and cassava are excluded. Mixed dishes count only an explicitly known qualifying produce weight; the app does not estimate a dish's ingredients. Unconfirmed items are not included in totals.
+
+The source catalogue and calculator are separate from the Supabase repository. The schema migration is in `supabase/migrations/20261011_create_five_a_day_entries.sql`. The application never runs database migrations.
+
+Portion guidance source: [NHS 5 A Day portion sizes](https://www.nhs.uk/live-well/eat-well/5-a-day/portion-sizes/).
+
 ## Development
 
 ### Required checks (run before every refactor change)
