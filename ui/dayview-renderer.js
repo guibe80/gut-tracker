@@ -39,6 +39,17 @@ const DV_LANE_ICON = { food: '🍽️', glucose: '🩸', gut: '🫃', bowel: '�
 
 // Module-level chart instances for cleanup
 const dvCharts = {};
+let dvNowChartType = null;
+let dvNowUpdateTimer = null;
+
+const dvNowIndicatorPlugin = {
+    id: 'dayViewNowIndicator',
+    afterLayout(chart) {
+        if (chart.canvas.id === `dv-chart-${dvNowChartType}`) {
+            dvUpdateNowIndicator(chart);
+        }
+    }
+};
 
 /* ------------------------------------------------------------------ */
 /* Data fetching                                                        */
@@ -101,6 +112,11 @@ function dvGetEvents(data, type) {
 /* ------------------------------------------------------------------ */
 
 function dvDestroyCharts() {
+    if (dvNowUpdateTimer) {
+        clearInterval(dvNowUpdateTimer);
+        dvNowUpdateTimer = null;
+    }
+
     for (const type in dvCharts) {
         if (dvCharts[type]) {
             destroyChart(dvCharts[type]);
@@ -147,6 +163,50 @@ function dvGetSharedTimeWindow(data) {
 
     const dayEnd = dvDayEnd(dvState.date).getTime();
     return { start: earliest, end: dayEnd };
+}
+
+function dvGetNowIndicatorPosition(chart, now = Date.now(), container = $('dvLanes')) {
+    const nowMs = now instanceof Date ? now.getTime() : Number(now);
+    if (!Number.isFinite(nowMs) || dvState.date !== dvFormatDate(new Date(nowMs))) return null;
+
+    const xScale = chart?.scales?.x;
+    const chartArea = chart?.chartArea;
+    const canvas = chart?.canvas;
+    if (!xScale || !chartArea || !canvas || !container) return null;
+
+    const scaleX = xScale.getPixelForValue(nowMs);
+    if (!Number.isFinite(scaleX) || scaleX < chartArea.left || scaleX > chartArea.right) return null;
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    return canvasRect.left - containerRect.left + scaleX;
+}
+
+function dvUpdateNowIndicator(chart) {
+    const indicator = document.querySelector('.dv-now');
+    if (!indicator) return;
+
+    const left = dvGetNowIndicatorPosition(chart);
+    indicator.style.display = left === null ? 'none' : '';
+    if (left !== null) indicator.style.left = `${left}px`;
+}
+
+function dvStartNowIndicatorRefresh() {
+    if (dvNowUpdateTimer) clearInterval(dvNowUpdateTimer);
+    const chart = dvCharts[dvNowChartType];
+    if (!chart) return;
+
+    dvUpdateNowIndicator(chart);
+    dvNowUpdateTimer = setInterval(() => dvUpdateNowIndicator(chart), 60_000);
+}
+
+function dvGetEventTooltipDetail(type, event) {
+    if (!event) return '';
+    if (type === 'food') {
+        const carbs = `${Number(event.value || 0).toFixed(0)}g carbs`;
+        return event.detail ? `${event.detail} · ${carbs}` : carbs;
+    }
+    return event.detail || (event.value == null ? '' : String(event.value));
 }
 
 function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart, timeWindow) {
@@ -200,10 +260,11 @@ function dvCreateLaneChart(type, events, yaxis, yMin, yMax, dayStart, timeWindow
         },
         getDetail: (tooltip) => {
             const idx = tooltip.dataPoints?.[0]?.dataIndex ?? 0;
-            return events[idx]?.detail || '';
+            return dvGetEventTooltipDetail(type, events[idx]);
         }
     });
 
+    chartConfig.plugins = [dvNowIndicatorPlugin];
     return createEmojiChart(canvas, chartConfig);
 }
 
@@ -273,13 +334,9 @@ function dvBuild() {
         </div>`;
     }
 
-    // Now line
+    // The active chart plugin positions this line from the live x-scale.
     if (showNowLine && visibleTypes.length && dvState.toggles[visibleTypes[0]] && eventCount > 0) {
-        const nowMs = now.getTime();
-        const nowPct = dvPercentThrough(dayStart, nowMs);
-        if (nowPct >= 0 && nowPct <= 1) {
-            html += `<div class="dv-now" style="left:${nowPct * 100}%"></div>`;
-        }
+        html += '<div class="dv-now" style="display:none"></div>';
     }
 
     if (eventCount === 0) {
@@ -287,6 +344,8 @@ function dvBuild() {
     }
 
     elLanes.innerHTML = html;
+
+    dvNowChartType = visibleTypes.find(type => dvGetEvents(data, type).length > 0) || null;
 
     // Create charts for each visible lane
     for (const type of visibleTypes) {
@@ -298,6 +357,8 @@ function dvBuild() {
 
         dvCharts[type] = dvCreateLaneChart(type, events, yaxis, range.yMin, range.yMax, dayStart, timeWindow);
     }
+
+    dvStartNowIndicatorRefresh();
 }
 
 /* ------------------------------------------------------------------ */
