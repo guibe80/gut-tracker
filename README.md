@@ -10,6 +10,7 @@ bowel movements, and weight — backed by Supabase PostgreSQL with Row Level Sec
 - Track gut symptoms and bowel movements (Bristol type)
 - Record weight entries
 - Track daily water intake with an interactive visualised bottle
+- Track 5 A Day fruit and vegetable portions against UK NHS guidance
 - Visualise everything on a daily timeline with toggleable lanes
 - See insights: glucose averages, trigger associations
 - Import V2 JSON backups and export V3 data
@@ -42,7 +43,7 @@ npx serve .
 
 ```
 gut-tracker/
-├── index.html              # Main app: UI, styles, app logic (single-file PWA)
+├── index.html              # Main app: UI, auth, main script (single-file PWA)
 ├── setup.html              # First-run page: stores Supabase publishable key
 ├── sw.js                   # Service worker: caching, offline shell, version patching
 ├── version.js              # APP_VERSION constant + Supabase key storage helpers
@@ -51,21 +52,27 @@ gut-tracker/
 │   ├── supabase-helpers.js   # Supabase error handling (missingColumn, isNetworkError, wait)
 │   ├── validation.js         # Input validation (supportedMealType)
 │   ├── html.js               # HTML escaping (esc)
-│   └── data-mapping.js       # V2 data extraction (pick, pickArray, recordTime)
+│   ├── data-mapping.js       # V2 data extraction (pick, pickArray, recordTime)
+│   └── five-a-day-calculator.js  # Pure 5 A Day portion calculations
 ├── manifest.webmanifest    # PWA install manifest
 ├── icon-192.png            # PWA icon (192px)
 ├── icon-512.png            # PWA icon (512px)
-├── VERSION                 # Version string (3.5.0)
+├── VERSION                 # Version string (4.14.0)
 ├── services/
-│   ├── data-service.js     # Supabase data loading/pagination
-│   └── v2-import.js        # V2 JSON backup import
+│   ├── data-service.js     # Supabase data loading/pagination, schema-fallback inserts
+│   ├── v2-import.js        # V2 JSON backup import + V3 export
+│   ├── five-a-day-repository.js  # 5 A Day Supabase data access
+│   └── five-a-day-catalogue.js   # 5 A Day food catalogue data
 ├── ui/
 │   ├── dayview-renderer.js # Day view timeline rendering
 │   ├── render.js           # List/tab rendering + data loading (v3)
 │   ├── timing-utils.js     # Glucose timing offset calculations + meal auto-fill
 │   ├── water-intake.js     # Water intake tracking: bottle viz + meal/drink integration
 │   ├── form-controllers.js # Form state, submit handlers, event wiring
-│   └── hba1c-trend.js     # HbA1c trend estimation (timing-weighted)
+│   ├── hba1c-trend.js     # HbA1c trend estimation (timing-weighted)
+│   ├── insights-view.js    # Insights tab rendering
+│   ├── five-a-day.js       # 5 A Day tab rendering + interactions
+│   └── chartjs-config.js   # Chart.js global configuration
 ├── .env                    # Local environment (gitignored, not committed)
 ├── .gitignore
 ├── .vscode/
@@ -79,14 +86,24 @@ gut-tracker/
 │   ├── playwright.config.js  # Playwright config with auto-starting web server
 │   ├── smoke.test.js       # Browser smoke tests for critical flows
 │   ├── server.js           # Static file server for smoke tests
+│   ├── water.test.js       # E2E tests for water intake feature
+│   ├── five-a-day.test.js  # E2E tests for 5 A Day feature
 │   └── unit/
 │       ├── datetime.test.js         # Unit tests for datetime utilities
 │       ├── html.test.js             # Unit tests for HTML escaping
 │       ├── supabase-helpers.test.js # Unit tests for Supabase helpers
 │       ├── validation.test.js       # Unit tests for validation helpers
 │       ├── data-mapping.test.js     # Unit tests for V2 data mapping
-│       └── timing-utils.test.js     # Unit tests for timing/offset logic
-│       └── water-intake.test.js     # Unit tests for water target + drink parsing
+│       ├── timing-utils.test.js     # Unit tests for timing/offset logic
+│       ├── water-intake.test.js     # Unit tests for water target + drink parsing
+│       ├── data-service.test.js     # Unit tests for Supabase data access
+│       ├── v2-import.test.js        # Unit tests for V2 import + export
+│       ├── dayview-renderer.test.js # Unit tests for day view rendering
+│       ├── render.test.js           # Unit tests for list/tab rendering
+│       ├── insights-view.test.js    # Unit tests for insights rendering
+│       ├── hba1c-trend.test.js      # Unit tests for HbA1c trend
+│       ├── five-a-day-calculator.test.js  # Unit tests for 5 A Day calculator
+│       └── five-a-day-repository.test.js  # Unit tests for 5 A Day repository
 ├── Makefile                # Repeatable syntax checks + dev server
 ├── AGENTS.md               # Agent workflow: git, release, safety rules
 ├── AI_CONTEXT.md           # Architecture, data rules, project checks
@@ -97,7 +114,7 @@ gut-tracker/
 
 ### Key architecture notes
 
-- **Static PWA** — no build system, no package manager, no bundler. `index.html` loads utility modules from `utils/` via `<script>` tags, then contains the main application logic (Supabase CRUD, UI rendering, event handlers) in a single `<script>` block.
+- **Static PWA** — no build system, no package manager, no bundler. `index.html` loads utility modules from `utils/`, `services/`, and `ui/` via `<script>` tags, then contains the main application logic (auth, data loading, event wiring) in a single `<script>` block.
 - **Supabase backend** — Auth + PostgreSQL with RLS. The service worker (`sw.js`) patches responses from older cached app shells for version compatibility.
 - **`version.js`** is the single source of truth for `APP_VERSION`. It is imported by `sw.js`, `index.html`, and `setup.html`.
 - **`VERSION` file** mirrors the version string in `version.js`. Keep both aligned for releases.
@@ -121,7 +138,7 @@ make check
 ```
 
 This runs:
-1. **JavaScript syntax** — `node --check version.js`, `node --check sw.js`, and all `utils/*.js`
+1. **JavaScript syntax** — `node --check version.js`, `node --check sw.js`, and all `utils/*.js`, `ui/*.js`, `services/*.js`
 2. **HTML structure** — validates DOCTYPE, `<html>`, and `<body>` tags in both `index.html` and `setup.html`
 3. **Git diff** — `git diff --check` for whitespace errors
 
@@ -131,7 +148,7 @@ This runs:
 make test-unit
 ```
 
-Unit tests use the Node.js built-in test runner (`node --test`). Test files live in `tests/unit/` and cover pure utility functions extracted into `utils/`.
+Unit tests use the Node.js built-in test runner (`node --test`). Test files live in `tests/unit/` and cover pure utility functions extracted into `utils/`, `services/`, and `ui/`.
 
 ### Browser smoke tests
 
@@ -141,6 +158,7 @@ npm install
 npx playwright install  # download browsers
 npm test
 ```
+
 
 Smoke tests verify:
 - App loads with correct title and version

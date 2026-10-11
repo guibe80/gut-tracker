@@ -18,7 +18,7 @@ Do not assume database structures that aren't present in these files.
 
 ## Authentication
 
-Supabase Auth is used. It stores **Supabase publishable key** in local explorer, not in code. It must be stored first by running setup.html. Once stored is possible use githug oauth to access the supabase and the PWA. 
+Supabase Auth is used. It stores **Supabase publishable key** in local explorer, not in code. It must be stored first by running setup.html. Once stored is possible use githug oauth to access the supabase and the PWA.
 
 Users are identified by:
 `auth.uid()`
@@ -56,6 +56,12 @@ Daily lifestyle/context information.
 ### weight_entries
 Weight measurements.
 
+### water_intake
+Water intake entries with source attribution (manual vs meal).
+
+### five_a_day_entries
+5 A Day fruit and vegetable portion tracking.
+
 # AI Context
 
 ## App
@@ -64,7 +70,21 @@ Weight measurements.
 - `sw.js` handles caching and legacy app-shell compatibility rewriting. Do not remove or simplify it without checking installed-client behavior.
 - Keep this file as the concise project reference. `AGENTS.md` contains Git and release workflow rules.
 
-## Data and security
+## Architecture
+
+### Module layout
+- `utils/` — Pure utility functions (datetime, validation, HTML escaping, data mapping, Supabase helpers, 5 A Day calculator)
+- `services/` — Supabase data access layer (data-service, v2-import, five-a-day-repository, five-a-day-catalogue)
+- `ui/` — UI rendering and event handlers (render, form-controllers, dayview-renderer, water-intake, insights-view, five-a-day, hba1c-trend, timing-utils, chartjs-config)
+- `index.html` — App shell, auth flow, main script (loads all modules via `<script>` tags)
+
+### Key files
+- `version.js` — APP_VERSION constant + Supabase key storage helpers. Single source of truth for version.
+- `VERSION` — Mirrors version.js. Keep both aligned for releases.
+- `sw.js` — Service worker: asset caching, offline shell, legacy app-shell compatibility patching.
+- `manifest.webmanifest` — PWA install manifest.
+
+### Data and security
 - Schema snapshot: `supabase/SCHEMA-SNAPSHOT.md`; generated types: `supabase/types.ts`. Snapshot last checked 2026-10-11; verify live columns and RLS before changing queries or payloads.
 - Supabase Auth identifies users with `auth.uid()`; user data uses `user_id`. Preserve RLS and foreign keys.
 - Never commit secrets, keys, or personal health data. Keep future AI credentials server-side; validate AI output and require user review before saving.
