@@ -156,6 +156,7 @@ async function fiveADayRender() {
         $('fiveADayPendingNotice').classList.add('hidden');
         return;
     }
+    fiveADaySetMessage('');
     const summary = summarizeFiveADayEntries(entries, fiveADaySelectedDate);
     fiveADayRenderProgress(summary);
     fiveADayRenderEntries(summary);
@@ -279,5 +280,4 @@ function initFiveADayTracker() {
     $('fiveADayCancelEdit').addEventListener('click', () => fiveADaySetEditMode(null));
     document.querySelector('.tab[data-tab="fiveaday"]').addEventListener('click', fiveADayRender);
     fiveADaySetEditMode(null);
-    fiveADayRender();
 }
