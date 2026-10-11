@@ -1,6 +1,21 @@
 const { test, expect } = require('@playwright/test');
 
 test.describe('5 A Day tracker prototype', () => {
+  test('waits for auth before loading and refreshes when the app session is ready', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#fiveADayMessage')).toBeEmpty();
+
+    await page.evaluate(() => {
+      fiveADayRepository = createFiveADayMemoryRepository();
+      user = { id: 'test-user', email: 'test@example.com' };
+      showApp();
+    });
+
+    await page.locator('.tab[data-tab="fiveaday"]').click();
+    await expect(page.locator('#fiveADayMessage')).toBeEmpty();
+    await expect(page.locator('.fiveaday-empty')).toBeVisible();
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.evaluate(() => {
