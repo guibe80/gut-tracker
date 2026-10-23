@@ -72,7 +72,7 @@ gut-tracker/
 ├── manifest.webmanifest     # PWA install manifest
 ├── icon-192.png             # PWA icon (192px)
 ├── icon-512.png             # PWA icon (512px)
-├── VERSION                  # Version string (4.14.0)
+├── VERSION                  # Version string (4.15.0)
 ├── .env                     # Local environment (gitignored, not committed)
 ├── .gitignore
 ├── .vscode/
@@ -136,7 +136,16 @@ This runs:
 make test-unit
 ```
 
-Unit tests use the Node.js built-in test runner (`node --test`). Test files live in `tests/unit/` and cover pure utility functions extracted into `utils/`, `services/`, and `ui/` (260 tests as of 4.14.0).
+Unit tests use the Node.js built-in test runner (`node --test`). Test files live in `tests/unit/` and cover pure utility functions extracted into `utils/`, `services/`, and `ui/`.
+
+### AI food and hydration logging
+
+Apply `supabase/migrations/20261023_add_ai_food_logging.sql`, then deploy the
+authenticated `analyse-food-log` Edge Function with `verify_jwt` enabled. Set
+`GROQ_API_KEY` and optionally `GROQ_MODEL` (defaults to `openai/gpt-oss-20b`) as
+Edge Function secrets; never put
+either value in the browser or repository. The feature uses JSON Schema output,
+requires review before saving, and stores only plain-water drinks in `water_intake`.
 
 > Note: `tests/unit/water-intake.test.js` has 7 pre-existing failures caused by gaps in its mock Supabase client (the `update()` chain and cross-date dedup path are not emulated). They are unrelated to app behavior and are not a blocker for refactoring.
 

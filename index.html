@@ -17,7 +17,9 @@
     <script src="./utils/validation.js"></script>
     <script src="./utils/html.js"></script>
     <script src="./utils/data-mapping.js"></script>
+    <script src="./utils/ai-food-log.js"></script>
     <script src="./services/data-service.js"></script>
+    <script src="./services/ai-food-log-service.js"></script>
     <script src="./services/migration.js"></script>
     <script src="./services/v2-import.js"></script>
     <script src="./services/five-a-day-catalogue.js"></script>
@@ -33,6 +35,7 @@
     <script src="./ui/water-intake.js"></script>
     <script src="./ui/insights-view.js"></script>
     <script src="./ui/five-a-day.js"></script>
+    <script src="./ui/ai-food-log.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
@@ -87,6 +90,15 @@
             </nav>
 
             <section id="food" class="pane">
+                <section class="card" aria-labelledby="aiFoodHeading">
+                    <h2 id="aiFoodHeading">✨ Describe food or drinks</h2>
+                    <p class="muted">Describe what you had in everyday language. AI estimates need your review before anything is saved.</p>
+                    <label for="aiFoodText">Food or drink description</label>
+                    <textarea id="aiFoodText" maxlength="2000" placeholder="e.g. Two scrambled eggs, two slices of wholemeal toast and a teaspoon of butter."></textarea>
+                    <div class="row" style="margin-top:14px"><button type="button" class="primary" id="aiFoodAnalyse">Analyse</button></div>
+                    <p id="aiFoodMsg" class="authmsg" aria-live="polite"></p>
+                    <div id="aiFoodReview" class="hidden" aria-live="polite"></div>
+                </section>
                 <form id="foodForm" class="card">
                     <h2>Record meal</h2>
                     <div class="grid">
@@ -545,6 +557,7 @@
         installInsightsView();
         initWaterIntake();
         initFiveADayTracker();
+        initAiFoodLogging();
     </script>
 </body>
 
