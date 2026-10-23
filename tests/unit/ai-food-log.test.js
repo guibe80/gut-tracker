@@ -7,13 +7,19 @@ const vm = require('node:vm');
 const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.resolve(__dirname, '../../utils/ai-food-log.js'), 'utf8'), sandbox);
-const { calculateAiTotals, validateAiFoodResponse, createAiFoodSavePayload } = sandbox;
+const { calculateAiTotals, validateAiFoodResponse, createAiFoodSavePayload, normaliseAiFoodSummary } = sandbox;
 
 function meal(overrides = {}) {
     return { status: 'success', entry_type: 'meal', ingredients: [{ name: 'toast', quantity: 80, unit: 'g', calories_kcal: 200, carbohydrates_g: 34, protein_g: 8, fibre_g: 6, sugars_g: 4, fat_g: 3, confidence: 'medium', assumptions: [], estimation_method: 'estimate' }], totals: { calories_kcal: 200, carbohydrates_g: 34, protein_g: 8, fibre_g: 6, sugars_g: 4, fat_g: 3 }, drinks: [], diabetes_indicators: { carbohydrate_level: 'moderate', glucose_impact: 'uncertain', explanation: 'Individual responses vary.' }, needs_clarification: false, clarification_questions: [], assumptions: [], ...overrides };
 }
 
 describe('AI food-log response contract', () => {
+    test('normalises plain-language summary strings returned by the edge function', () => {
+        assert.strictEqual(normaliseAiFoodSummary('   2 eggs, toast, and tea. Roughly 30g carbs and 12g protein.   '), '2 eggs, toast, and tea. Roughly 30g carbs and 12g protein.');
+        assert.strictEqual(normaliseAiFoodSummary({ summary: 'A banana and yoghurt. Roughly 25g carbs.' }), 'A banana and yoghurt. Roughly 25g carbs.');
+        assert.strictEqual(normaliseAiFoodSummary({ data: { summary: 'Water was about 500ml.' } }), 'Water was about 500ml.');
+    });
+
     test('calculates food totals without counting drinks twice', () => {
         const response = meal({ drinks: [{ name: 'water', quantity: 500, unit: 'ml', is_plain_water: true, confidence: 'high', assumptions: [] }] });
         assert.deepStrictEqual({ ...calculateAiTotals(response.ingredients) }, response.totals);

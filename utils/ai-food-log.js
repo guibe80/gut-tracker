@@ -7,6 +7,25 @@ function aiNumber(value) {
     return Number.isFinite(number) && number >= 0 && number <= 100000 ? number : null;
 }
 
+function normaliseAiFoodSummary(response) {
+    if (typeof response === 'string') return response.trim();
+    if (response && typeof response === 'object') {
+        const values = [
+            response.summary,
+            response.text,
+            response.analysis,
+            response.message,
+            response.data && response.data.summary,
+            response.data && response.data.text,
+            response.data && response.data.analysis
+        ];
+        for (const value of values) {
+            if (typeof value === 'string' && value.trim()) return value.trim();
+        }
+    }
+    return '';
+}
+
 function calculateAiTotals(items) {
     return (items || []).reduce((totals, item) => {
         AI_NUTRIENTS.forEach(key => { totals[key] += aiNumber(item[key]) || 0; });
